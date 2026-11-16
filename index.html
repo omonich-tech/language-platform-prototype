@@ -41,10 +41,17 @@ table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;p
 details summary{cursor:pointer;color:var(--acc);font-size:13px}
 .empty{color:var(--mut);padding:8px 0}
 a{color:var(--acc)}
+.vdock{position:fixed;right:12px;bottom:12px;z-index:50;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 6px 24px rgba(0,0,0,.18);width:380px;overflow:hidden}
+.vdock.big{width:min(900px,96vw)}
+.vdock .vbar{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--line);font-size:13px}
+.vdock iframe{display:block;width:100%;height:280px;border:0;background:#111}
+.vdock.big iframe{height:min(70vh,560px)}
+@media(max-width:700px){.vdock,.vdock.big{left:8px;right:8px;width:auto;bottom:8px}.vdock iframe{height:240px}}
 </style>
 </head>
 <body>
 <div id="app"></div>
+<div id="vdock" class="vdock" hidden></div>
 <script>
 'use strict';
 var DAYS=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
@@ -171,7 +178,7 @@ function statusLesson(l){
 /* ---------- аналитика интерфейса ---------- */
 var STKEY='lang-platform-stats-v1',ST={},ME=null,statDirty=false,statPushing=false,statTimer=null,statSub=false,errFlag=false;
 var SCR={'client:landing':'Клиент: страница учителя','client:book':'Клиент: запись на пробный','client:request':'Клиент: заявка на подбор','client:requestDone':'Клиент: заявка принята','client:cab':'Клиент: кабинет','client:pay':'Клиент: оплата','client:schedule':'Клиент: выбор времени','room:client':'Комната урока (клиент)','room:teacher':'Комната урока (учитель)','teacher:students':'Учитель: ученики','teacher:students-student':'Учитель: страница ученика','teacher:schedule':'Учитель: расписание','teacher:profile':'Учитель: профиль и языки','teacher:money':'Учитель: заработок','admin:verify':'Админ: проверка и приглашения','admin:requests':'Админ: заявки','admin:payouts':'Админ: выплаты','admin:disputes':'Админ: споры','admin:trials':'Админ: пробные','admin:settings':'Админ: настройки','admin:analytics':'Админ: аналитика'};
-var ACT={role:'Переключить роль',reset:'Сбросить тест',cGo:'Клиент: переход',cBookStart:'Клиент: «Записаться на пробный урок»',cBook:'Клиент: подтвердить запись',cRequest:'Клиент: отправить заявку',cLogin:'Клиент: войти как существующий',cPack:'Клиент: выбрать пакет',cPay:'Клиент: подтвердить оплату',cSchedule:'Клиент: сохранить время уроков',cDispute:'Клиент: пожаловаться на урок',openRoom:'Открыть комнату урока',closeRoom:'Выйти из комнаты',tTab:'Учитель: вкладка',tStudent:'Учитель: страница ученика',saveBoard:'Учитель: сохранить доску',saveNotes:'Учитель: сохранить заметки',saveProfile:'Учитель: сохранить профиль',savePrices:'Учитель: сохранить цены',addLang:'Учитель: добавить язык',saveAvail:'Учитель: сохранить расписание',reqPayout:'Учитель: запросить выплату',addMark:'Учитель: добавить пометку',finStart:'Учитель: «Завершить урок»',finCancel:'Учитель: отмена завершения',finDone:'Учитель: отправить итог',noShow:'Учитель: «Ученик не пришёл»',aTab:'Админ: вкладка',aVerify:'Админ: проверка языка',aReject:'Админ: отказ по языку',aInvite:'Админ: создать приглашение',aMatch:'Админ: подобрать учителя',aPay:'Админ: выплатить',aOpenDispute:'Админ: открыть материалы спора',aResolve:'Админ: решение по спору',aSettings:'Админ: сохранить настройки',statClear:'Админ: очистить аналитику'};
+var ACT={vStart:'Комната: начать видеоурок на сайте',vStop:'Комната: завершить звонок',vSize:'Комната: размер окна звонка',role:'Переключить роль',reset:'Сбросить тест',cGo:'Клиент: переход',cBookStart:'Клиент: «Записаться на пробный урок»',cBook:'Клиент: подтвердить запись',cRequest:'Клиент: отправить заявку',cLogin:'Клиент: войти как существующий',cPack:'Клиент: выбрать пакет',cPay:'Клиент: подтвердить оплату',cSchedule:'Клиент: сохранить время уроков',cDispute:'Клиент: пожаловаться на урок',openRoom:'Открыть комнату урока',closeRoom:'Выйти из комнаты',tTab:'Учитель: вкладка',tStudent:'Учитель: страница ученика',saveBoard:'Учитель: сохранить доску',saveNotes:'Учитель: сохранить заметки',saveProfile:'Учитель: сохранить профиль',savePrices:'Учитель: сохранить цены',addLang:'Учитель: добавить язык',saveAvail:'Учитель: сохранить расписание',reqPayout:'Учитель: запросить выплату',addMark:'Учитель: добавить пометку',finStart:'Учитель: «Завершить урок»',finCancel:'Учитель: отмена завершения',finDone:'Учитель: отправить итог',noShow:'Учитель: «Ученик не пришёл»',aTab:'Админ: вкладка',aVerify:'Админ: проверка языка',aReject:'Админ: отказ по языку',aInvite:'Админ: создать приглашение',aMatch:'Админ: подобрать учителя',aPay:'Админ: выплатить',aOpenDispute:'Админ: открыть материалы спора',aResolve:'Админ: решение по спору',aSettings:'Админ: сохранить настройки',statClear:'Админ: очистить аналитику'};
 var PAR={verified:'подтвердить',test:'проверочный урок',returned:'вернуть урок',rejected:'отклонить',students:'ученики',schedule:'расписание',profile:'профиль',money:'заработок',verify:'проверка',requests:'заявки',payouts:'выплаты',disputes:'споры',trials:'пробные',settings:'настройки',analytics:'аналитика',client:'клиент',teacher:'учитель',admin:'администратор'};
 var CORE=['cBookStart|','cBook|','cRequest|','cPack|5','cPack|10','cPay|','cSchedule|','cDispute|','addMark|','finDone|','noShow|','saveBoard|','saveNotes|','savePrices|','addLang|','saveAvail|','reqPayout|','aVerify|verified','aVerify|test','aReject|','aInvite|','aMatch|','aPay|','aOpenDispute|','aResolve|returned','aResolve|rejected','aSettings|'];
 function lbl(key){
@@ -284,6 +291,22 @@ function analyticsTab(){
   return h;
 }
 
+/* ---------- видеозвонок внутри сайта (Daily) ---------- */
+var VID={on:false,room:null,big:false,url:''};
+function isDaily(u){try{var x=new URL(u);return x.protocol==='https:'&&/(^|\.)daily\.co$/.test(x.hostname);}catch(e){return false;}}
+function syncDock(){
+  var d=document.getElementById('vdock'); if(!d)return;
+  if(VID.on&&!(S.room&&Number(S.room)===VID.room&&les(S.room)))VID.on=false;
+  if(!VID.on){d.hidden=true;d.innerHTML='';d.dataset.url='';return;}
+  d.className='vdock'+(VID.big?' big':'');
+  if(d.dataset.url!==VID.url){ /* iframe создаём один раз, чтобы звонок не перезапускался */
+    d.innerHTML='<div class="vbar"><b>Видеоурок</b><span><button class="btn sec sm" data-a="vSize"></button> <button class="btn bad sm" data-a="vStop">Завершить звонок</button></span></div><iframe allow="camera; microphone; display-capture; autoplay; fullscreen" allowfullscreen></iframe>';
+    d.querySelector('iframe').src=VID.url; d.dataset.url=VID.url;
+  }
+  d.querySelector('[data-a=vSize]').textContent=VID.big?'Меньше':'Крупнее';
+  d.hidden=false;
+}
+
 /* ---------- каркас ---------- */
 function render(){
   save();
@@ -291,6 +314,7 @@ function render(){
   if(S.room&&les(S.room))body=roomView();
   else body=S.role==='client'?clientView():S.role==='teacher'?teacherView():adminView();
   $('#app').innerHTML=topBar()+body+feed();
+  syncDock();
   trackView();
 }
 function topBar(){
@@ -447,7 +471,7 @@ function scheduleTab(){
 }
 function profileTab(){
   var t=T();
-  var h='<div class="card"><h3>Видеозвонок и выплаты</h3><label>Ссылка на видеозвонок (Meet, Zoom, Телемост — любая)</label><input id="p-video" value="'+esc(t.video)+'">'
+  var h='<div class="card"><h3>Видеозвонок и выплаты</h3><label>Ссылка на видеозвонок. Ссылка комнаты Daily откроется прямо на сайте, другие (Meet, Zoom, Телемост) — на отдельной вкладке</label><input id="p-video" value="'+esc(t.video)+'">'
    +'<label>Карта для выплат (Humo или Uzcard, в сумах)</label><input id="p-card" value="'+esc(t.card)+'"><p><button class="btn sec" data-a="saveProfile">Сохранить</button></p></div>';
   h+='<div class="card"><h3>Языки и цены ($ за урок)</h3><table><tr><th>Язык</th><th>Цена</th><th>Статус проверки</th></tr>'
    +t.langs.map(function(l,i){return '<tr><td>'+esc(l.lang)+'</td><td><input id="pr-'+i+'" type="number" min="1" value="'+l.price+'" style="width:80px"></td><td>'+statusChip(l)+'</td></tr>';}).join('')+'</table>'
@@ -469,11 +493,18 @@ function moneyTab(){
 }
 
 /* ---------- комната урока ---------- */
+function videoCard(t,isT){
+  if(isDaily(t.video)){
+    if(VID.on)return '<p><span class="chip ok">Звонок идёт</span></p><div class="mut">Окно звонка в правом нижнем углу. Можно ходить по комнате, звонок не прервётся.</div>';
+    return '<p><button class="btn" data-a="vStart">Начать видеоурок</button></p><div class="mut">Звонок откроется прямо здесь, в окне на этой странице. Браузер спросит доступ к камере и микрофону.'+(isT?' Чтобы показать экран, нажмите «Показать экран» в окне звонка.':'')+'</div>';
+  }
+  return '<p><a href="'+esc(t.video)+'" target="_blank" rel="noopener">Открыть видеозвонок</a></p><div class="mut">У этого учителя внешняя ссылка (Meet, Zoom и т. п.): такие звонки нельзя встроить, он откроется на другой вкладке.'+(isT?' Чтобы звонок шёл прямо на сайте, вставьте в «Профиль» ссылку комнаты Daily (адрес вида https://…daily.co/…).':'')+'</div>';
+}
 function roomView(){
   var l=les(S.room),s=stu(l.studentId),t=S.teachers[l.teacherId],isT=S.role==='teacher';
   var marks=l.marks||[];
   var h='<div class="card"><div class="row sp"><button class="btn sec sm" data-a="closeRoom">← Выйти из комнаты</button>'+statusLesson(l)+'</div><h2 style="margin-top:10px">Урок: '+slotLabel(l.slot)+'</h2><div class="mut">'+esc(s.name)+' · '+esc(t.name)+' · '+esc(s.lang)+'</div></div>';
-  h+='<div class="grid2"><div class="card"><h3>Видеозвонок</h3><p><a href="'+esc(t.video)+'" target="_blank" rel="noopener">Открыть видеозвонок</a></p><div class="mut">Звонок идёт во внешнем сервисе, на другой вкладке.'+(isT?' Чтобы показать экран, нажмите «Показать экран» в самом звонке.':'')+'</div></div>'
+  h+='<div class="grid2"><div class="card"><h3>Видеозвонок</h3>'+videoCard(t,isT)+'</div>'
    +'<div class="card"><h3>Общая доска</h3>'+(s.board?'<p><a href="'+esc(s.board)+'" target="_blank" rel="noopener">Открыть доску ученика</a></p><div class="mut">Одна постоянная доска на ученика.</div>':'<div class="mut">Доска не добавлена'+(isT?': добавьте ссылку на странице ученика.':'.')+'</div>')+'</div></div>';
   h+='<div class="card"><h3>Пометки урока <span class="chip warn">опыт: так выглядела бы своя доска</span></h3>';
   if(!marks.length)h+='<div class="empty">Пометок нет.</div>';
@@ -621,6 +652,9 @@ var A={
   },
   openRoom:function(d){S.room=Number(d.id);S.fin=false;},
   closeRoom:function(){S.room=null;S.fin=false;},
+  vStart:function(){var l=les(S.room),t=S.teachers[l.teacherId];if(!isDaily(t.video))return false;VID={on:true,room:Number(S.room),big:false,url:t.video};},
+  vStop:function(){VID.on=false;},
+  vSize:function(){VID.big=!VID.big;},
   tTab:function(d){S.tv={tab:d.k,studentId:null};},
   tStudent:function(d){S.tv.studentId=d.id?Number(d.id):null;},
   saveBoard:function(d){stu(Number(d.id)).board=val('board');},
