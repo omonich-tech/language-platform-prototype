@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Тестовый прототип платформы для учителей языков</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1d1d1b;--mut:#6b6a65;--line:#dedcd4;--acc:#2a6fdb;--accbg:#e7effc;--ok:#1f7a45;--okbg:#e4f3ea;--warn:#a65b00;--warnbg:#fdf0dc;--bad:#b3261e;--badbg:#fbe7e5}
+@media(prefers-color-scheme:dark){:root{--bg:#161614;--card:#211f1d;--ink:#eeece6;--mut:#a19f97;--line:#3a3834;--acc:#7aa7f5;--accbg:#1f2b43;--ok:#6fcf97;--okbg:#18301f;--warn:#e8b25c;--warnbg:#3a2d14;--bad:#f2928b;--badbg:#3d1d1b}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+#app{max-width:880px;margin:0 auto;padding:12px 14px 60px}
+.banner{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:8px 12px;font-size:13px;margin-bottom:10px;display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.roles{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.roles button,.tabs button{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 14px;font:inherit;cursor:pointer}
+.roles button.on,.tabs button.on{background:var(--accbg);border-color:var(--acc);color:var(--acc);font-weight:600}
+.tabs{display:flex;gap:6px;margin:4px 0 14px;flex-wrap:wrap}
+h1{font-size:21px;margin:4px 0 10px}h2{font-size:17px;margin:0 0 8px}h3{font-size:15px;margin:0 0 6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sp{justify-content:space-between}
+.mut{color:var(--mut);font-size:13px}
+.btn{border:1px solid var(--acc);background:var(--acc);color:#fff;border-radius:8px;padding:8px 14px;font:inherit;cursor:pointer}
+.btn.sec{background:transparent;color:var(--acc)}
+.btn.bad{background:transparent;border-color:var(--bad);color:var(--bad)}
+.btn.sm{padding:4px 10px;font-size:13px}
+.btn:disabled{opacity:.5;cursor:default}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
+input[type=checkbox],input[type=radio]{width:auto}
+label{display:block;font-size:13px;color:var(--mut);margin:8px 0 3px}
+textarea{min-height:60px;resize:vertical}
+.chip{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;background:var(--accbg);color:var(--acc)}
+.chip.ok{background:var(--okbg);color:var(--ok)}.chip.warn{background:var(--warnbg);color:var(--warn)}.chip.bad{background:var(--badbg);color:var(--bad)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:640px){.grid2{grid-template-columns:1fr}}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.slot{border:1px solid var(--line);border-radius:8px;padding:6px 8px;display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:7px 6px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--mut);font-weight:500;font-size:12px}
+.note{background:var(--accbg);border-radius:8px;padding:8px 10px;font-size:13px;margin:8px 0}
+.mark{display:flex;gap:8px;align-items:center;padding:4px 0}
+details summary{cursor:pointer;color:var(--acc);font-size:13px}
+.empty{color:var(--mut);padding:8px 0}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+var DAYS=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+var KEY='lang-platform-test-v1';
+var S;
+
+function fresh(){
+  return {
+    role:'client',cv:{screen:'landing'},tv:{tab:'students',studentId:null},av:{tab:'verify'},
+    room:null,fin:false,clientId:null,
+    settings:{commission:12,trialPay:0,rate:12000},
+    teachers:{maria:{id:'maria',name:'Мария',video:'https://meet.google.com/test-mariya',card:'Humo ••1234',paidOut:0,payoutReq:false,
+      langs:[
+        {lang:'Английский',price:15,status:'verified',reason:''},
+        {lang:'Русский',price:12,status:'verified',reason:''},
+        {lang:'Узбекский',price:10,status:'verified',reason:''},
+        {lang:'Немецкий',price:15,status:'pending',reason:''},
+        {lang:'Испанский',price:18,status:'pending',reason:''},
+        {lang:'Корейский',price:18,status:'pending',reason:''}
+      ],
+      avail:{0:[10,18],1:[10,18],2:[10,18],3:[10,18],4:[10,16]}}},
+    students:[],lessons:[],payments:[],disputes:[],requests:[],invites:[],log:[],msgs:[],nid:1
+  };
+}
+function load(){try{var j=localStorage.getItem(KEY);if(j)return JSON.parse(j);}catch(e){}return fresh();}
+
+/* ---------- общая база (сервер) ---------- */
+var SHARED=['settings','teachers','students','lessons','payments','disputes','requests','invites','log','msgs','nid'];
+var DOC=null,DBREF=null,MYID=Math.random().toString(36).slice(2),canWrite=true,syncState='local';
+var pushing=false,dirty=false,lastStr='',pendingRender=false,slowTimer=null;
+function sharedOf(){var o={};SHARED.forEach(function(k){o[k]=S[k];});return o;}
+function clone(x){return JSON.parse(JSON.stringify(x));}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
+  push();
+}
+function push(){
+  if(!DOC||!canWrite)return;
+  var str=JSON.stringify(sharedOf());
+  if(str===lastStr)return;
+  if(pushing){dirty=true;return;}
+  pushing=true;dirty=false;lastStr=str;
+  DOC.set({data:clone(sharedOf()),by:MYID,t:Date.now()}).then(function(){
+    pushing=false;if(dirty)push();
+  },function(e){
+    pushing=false;
+    if(e&&e.code==='invalid_argument'){canWrite=false;setSync('readonly');trackErr('Нет прав записи в общую базу','sync');}
+    else{lastStr='';setSync('error');trackErr('Не удалось сохранить в общую базу','sync');}
+  });
+}
+function setSync(s){syncState=s;var b=document.querySelector('.banner .syncmsg');if(b)b.textContent=syncText();}
+function syncText(){
+  return {local:'Данные только в этом браузере.',online:'Общая база подключена: изменения видны всем, кто открыл страницу.',slow:'Связь с общей базой медленная, данные могут быть устаревшими.',readonly:'Режим просмотра: ваши изменения не сохраняются в общей базе.',error:'Общая база недоступна, данные только в этом браузере.'}[syncState];
+}
+function connect(){
+  if(typeof claude==='undefined'||!claude||!claude.use)return;
+  claude.use('db').then(function(db){
+    if(!db)return;
+    return Promise.resolve(claude.use('user')).then(function(u){
+      if(u&&u.can){return Promise.resolve(u.can('data.write')).then(function(r){if(r===false)canWrite=false;},function(){});}
+    }).then(function(){
+      DOC=db.doc('app/state');DBREF=db;
+      ST={};ST[MYID]=ME;statDirty=true;scheduleStatPush();
+      if(S.role==='admin'&&S.av.tab==='analytics')ensureStatSub();
+      slowTimer=setTimeout(function(){setSync('slow');},10000);
+      DOC.onSnapshot(function(snap){
+        if(!snap.metadata.fromCache){clearTimeout(slowTimer);}
+        if(!snap.exists){
+          if(!snap.metadata.fromCache){setSync(canWrite?'online':'readonly');push();}
+          return;
+        }
+        var d=snap.data();
+        setSync(canWrite?'online':'readonly');
+        if(d.by===MYID)return;
+        SHARED.forEach(function(k){if(d.data&&d.data[k]!==undefined)S[k]=clone(d.data[k]);});
+        lastStr=JSON.stringify(sharedOf());
+        var ae=document.activeElement;
+        if(ae&&(ae.tagName==='INPUT'||ae.tagName==='TEXTAREA'||ae.tagName==='SELECT')){pendingRender=true;}
+        else render();
+      },function(){setSync('error');});
+    });
+  }).catch(function(){setSync('error');});
+}
+
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function $(s){return document.querySelector(s);}
+function val(id){var e=document.getElementById(id);return e?e.value.trim():'';}
+function nid(){return S.nid++;}
+function p2(n){return String(n).padStart(2,'0');}
+function T(){return S.teachers.maria;}
+function stu(i){return S.students.find(function(s){return s.id===i;});}
+function les(i){return S.lessons.find(function(l){return l.id===i;});}
+function usd(n){return '$'+(Math.round(n*100)/100);}
+function som(n){return Math.round(n*S.settings.rate).toLocaleString('ru-RU')+' сум';}
+function priceOf(t,lang){var x=t.langs.find(function(l){return l.lang===lang;});return x?x.price:0;}
+function say(to,text){S.msgs.unshift({to:to,text:text,t:new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})});}
+function slotLabel(s){var a=s.split(' '),d=a[0].split('-').map(Number),dt=new Date(d[0],d[1]-1,d[2]);return DAYS[(dt.getDay()+6)%7]+' '+p2(d[2])+'.'+p2(d[1])+' · '+p2(Number(a[1]))+':00';}
+function taken(tid,slot){return S.lessons.some(function(l){return l.teacherId===tid&&l.slot===slot&&l.status==='planned';});}
+function genSlots(tid){
+  var t=S.teachers[tid],out=[],now=new Date();
+  for(var i=1;i<=7;i++){
+    var dt=new Date(now.getFullYear(),now.getMonth(),now.getDate()+i),wd=(dt.getDay()+6)%7,a=t.avail[wd];
+    if(!a)continue;
+    for(var h=a[0];h<a[1];h++){
+      var s=dt.getFullYear()+'-'+p2(dt.getMonth()+1)+'-'+p2(dt.getDate())+' '+p2(h);
+      if(!taken(tid,s))out.push(s);
+    }
+  }
+  return out;
+}
+function leftOf(s){return s.credits+S.lessons.filter(function(l){return l.studentId===s.id&&l.type==='regular'&&l.status==='planned';}).length;}
+function earnedOf(t){return S.lessons.filter(function(l){return l.teacherId===t.id&&l.status==='done';}).reduce(function(a,l){return a+l.earned;},0);}
+function balanceOf(t){return earnedOf(t)-t.paidOut;}
+function verifiedLangs(t){return t.langs.filter(function(l){return l.status==='verified';});}
+function statusChip(l){
+  var m={verified:['ok','Проверен'],pending:['warn','На проверке'],test:['warn','Нужен проверочный урок'],rejected:['bad','Отказ']}[l.status];
+  return '<span class="chip '+m[0]+'">'+m[1]+'</span>'+(l.status==='rejected'&&l.reason?' <span class="mut">'+esc(l.reason)+'</span>':'');
+}
+function statusLesson(l){
+  var m={planned:['','Запланирован'],done:['ok','Проведён'],noshow:['warn','Ученик не пришёл'],returned:['bad','Урок возвращён после спора']}[l.status];
+  return '<span class="chip '+m[0]+'">'+m[1]+'</span>';
+}
+
+/* ---------- аналитика интерфейса ---------- */
+var STKEY='lang-platform-stats-v1',ST={},ME=null,statDirty=false,statPushing=false,statTimer=null,statSub=false,errFlag=false;
+var SCR={'client:landing':'Клиент: страница учителя','client:book':'Клиент: запись на пробный','client:request':'Клиент: заявка на подбор','client:requestDone':'Клиент: заявка принята','client:cab':'Клиент: кабинет','client:pay':'Клиент: оплата','client:schedule':'Клиент: выбор времени','room:client':'Комната урока (клиент)','room:teacher':'Комната урока (учитель)','teacher:students':'Учитель: ученики','teacher:students-student':'Учитель: страница ученика','teacher:schedule':'Учитель: расписание','teacher:profile':'Учитель: профиль и языки','teacher:money':'Учитель: заработок','admin:verify':'Админ: проверка и приглашения','admin:requests':'Админ: заявки','admin:payouts':'Админ: выплаты','admin:disputes':'Админ: споры','admin:trials':'Админ: пробные','admin:settings':'Админ: настройки','admin:analytics':'Админ: аналитика'};
+var ACT={role:'Переключить роль',reset:'Сбросить тест',cGo:'Клиент: переход',cBookStart:'Клиент: «Записаться на пробный урок»',cBook:'Клиент: подтвердить запись',cRequest:'Клиент: отправить заявку',cLogin:'Клиент: войти как существующий',cPack:'Клиент: выбрать пакет',cPay:'Клиент: подтвердить оплату',cSchedule:'Клиент: сохранить время уроков',cDispute:'Клиент: пожаловаться на урок',openRoom:'Открыть комнату урока',closeRoom:'Выйти из комнаты',tTab:'Учитель: вкладка',tStudent:'Учитель: страница ученика',saveBoard:'Учитель: сохранить доску',saveNotes:'Учитель: сохранить заметки',saveProfile:'Учитель: сохранить профиль',savePrices:'Учитель: сохранить цены',addLang:'Учитель: добавить язык',saveAvail:'Учитель: сохранить расписание',reqPayout:'Учитель: запросить выплату',addMark:'Учитель: добавить пометку',finStart:'Учитель: «Завершить урок»',finCancel:'Учитель: отмена завершения',finDone:'Учитель: отправить итог',noShow:'Учитель: «Ученик не пришёл»',aTab:'Админ: вкладка',aVerify:'Админ: проверка языка',aReject:'Админ: отказ по языку',aInvite:'Админ: создать приглашение',aMatch:'Админ: подобрать учителя',aPay:'Админ: выплатить',aOpenDispute:'Админ: открыть материалы спора',aResolve:'Админ: решение по спору',aSettings:'Админ: сохранить настройки',statClear:'Админ: очистить аналитику'};
+var PAR={verified:'подтвердить',test:'проверочный урок',returned:'вернуть урок',rejected:'отклонить',students:'ученики',schedule:'расписание',profile:'профиль',money:'заработок',verify:'проверка',requests:'заявки',payouts:'выплаты',disputes:'споры',trials:'пробные',settings:'настройки',analytics:'аналитика',client:'клиент',teacher:'учитель',admin:'администратор'};
+var CORE=['cBookStart|','cBook|','cRequest|','cPack|5','cPack|10','cPay|','cSchedule|','cDispute|','addMark|','finDone|','noShow|','saveBoard|','saveNotes|','savePrices|','addLang|','saveAvail|','reqPayout|','aVerify|verified','aVerify|test','aReject|','aInvite|','aMatch|','aPay|','aOpenDispute|','aResolve|returned','aResolve|rejected','aSettings|'];
+function lbl(key){
+  var p=key.split('|'),b=ACT[p[0]]||p[0],x='';
+  if(p[1]){x=p[0]==='cPack'?' ('+p[1]+' уроков)':p[0]==='cGo'?' → '+(SCR['client:'+p[1]]||p[1]):' — '+(PAR[p[1]]||p[1]);}
+  return b+x;
+}
+function scrLbl(k){return SCR[k]||k;}
+function hm(t){var d=new Date(t);return p2(d.getHours())+':'+p2(d.getMinutes())+':'+p2(d.getSeconds());}
+function curScreen(){
+  if(S.room&&les(S.room))return 'room:'+S.role;
+  if(S.role==='client')return 'client:'+S.cv.screen;
+  if(S.role==='teacher')return 'teacher:'+S.tv.tab+(S.tv.studentId?'-student':'');
+  return 'admin:'+S.av.tab;
+}
+function newMe(){return {sid:MYID,started:Date.now(),last:Date.now(),ua:/Mobi|Android|iPhone/i.test(navigator.userAgent)?'телефон':'компьютер',clicks:{},views:{},misses:{},errors:{},ev:[],lastScreen:''};}
+function ensureMe(){if(!ME){ME=ST[MYID]=newMe();}return ME;}
+function statTouch(){ME.last=Date.now();statDirty=true;scheduleStatPush();}
+function addEv(x){ME.ev.push(x);if(ME.ev.length>150)ME.ev.shift();}
+function trackClick(d){
+  var scr=curScreen();if(scr==='admin:analytics'&&d.a!=='statClear')return;
+  ensureMe();
+  var k=d.a+'|'+(d.k||d.s||d.n||d.st||d.r||'');
+  ME.clicks[k]=(ME.clicks[k]||0)+1;
+  addEv({t:Date.now(),y:'c',k:k,s:scr,r:S.role});statTouch();
+}
+function trackMiss(el){
+  var scr=curScreen();if(scr==='admin:analytics')return;
+  if(el.closest&&el.closest('input,select,textarea,label,summary'))return;
+  ensureMe();
+  var a=el.closest&&el.closest('a');
+  if(a){var lk='Ссылка: '+(a.textContent||'').trim().slice(0,40);ME.clicks['link|'+lk]=(ME.clicks['link|'+lk]||0)+1;addEv({t:Date.now(),y:'c',k:'link|'+lk,s:scr,r:S.role});statTouch();return;}
+  var txt='<'+el.tagName.toLowerCase()+'> '+(el.textContent||'').trim().replace(/\s+/g,' ').slice(0,40);
+  var key=scr+'|'+txt,m=ME.misses[key]||(ME.misses[key]={txt:txt,scr:scr,n:0});
+  m.n++;addEv({t:Date.now(),y:'m',k:txt,s:scr,r:S.role});statTouch();
+}
+function trackErr(msg,kind){
+  errFlag=true;ensureMe();
+  var scr=curScreen(),m=String(msg).slice(0,140),key=kind+'|'+scr+'|'+m,e=ME.errors[key]||(ME.errors[key]={msg:m,scr:scr,kind:kind,n:0});
+  e.n++;addEv({t:Date.now(),y:'e',k:m,s:scr,r:S.role});statTouch();
+}
+function trackView(){
+  ensureMe();
+  var scr=curScreen();
+  if(scr==='admin:analytics'){ME.last=Date.now();return;}
+  if(scr!==ME.lastScreen){ME.lastScreen=scr;ME.views[scr]=(ME.views[scr]||0)+1;statTouch();}
+}
+function scheduleStatPush(){if(statTimer)return;statTimer=setTimeout(function(){statTimer=null;pushStat();},1500);}
+function pushStat(){
+  if(!DBREF){try{localStorage.setItem(STKEY,JSON.stringify(ST));}catch(e){}return;}
+  if(!canWrite||!statDirty)return;
+  if(statPushing){scheduleStatPush();return;}
+  statDirty=false;statPushing=true;
+  DBREF.doc('stats/'+MYID).set(clone(ME)).then(function(){statPushing=false;},function(){statPushing=false;});
+}
+function ensureStatSub(){
+  if(statSub||!DBREF)return;
+  statSub=true;
+  DBREF.collection('stats').onSnapshot(function(snap){
+    snap.docs.forEach(function(d){if(d.id!==MYID)ST[d.id]=clone(d.data());});
+    snap.docChanges().forEach(function(c){if(c.type==='removed'&&c.doc.id!==MYID)delete ST[c.doc.id];});
+    var ae=document.activeElement;
+    if(S.role==='admin'&&S.av.tab==='analytics'&&!(ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName)))render();
+  },function(){});
+}
+function bar(n,max){return '<div style="height:6px;border-radius:3px;background:var(--acc);width:'+(max?Math.max(2,Math.round(n/max*100)):0)+'%"></div>';}
+function analyticsTab(){
+  ensureMe();
+  var all=Object.keys(ST).map(function(k){return ST[k];}),now=Date.now();
+  var clicks={},errs={},miss={},views={},ended={},ev=[],nClicks=0,nErr=0,nMiss=0,active=0;
+  all.forEach(function(m){
+    if(now-m.last<120000)active++;
+    Object.keys(m.clicks||{}).forEach(function(k){var c=clicks[k]||(clicks[k]={n:0,s:0});c.n+=m.clicks[k];c.s++;nClicks+=m.clicks[k];});
+    Object.keys(m.errors||{}).forEach(function(k){var e=m.errors[k],a=errs[k]||(errs[k]={msg:e.msg,scr:e.scr,kind:e.kind,n:0,s:0});a.n+=e.n;a.s++;nErr+=e.n;});
+    Object.keys(m.misses||{}).forEach(function(k){var e=m.misses[k],a=miss[k]||(miss[k]={txt:e.txt,scr:e.scr,n:0});a.n+=e.n;nMiss+=e.n;});
+    Object.keys(m.views||{}).forEach(function(k){views[k]=(views[k]||0)+m.views[k];});
+    if(now-m.last>=120000&&m.lastScreen)ended[m.lastScreen]=(ended[m.lastScreen]||0)+1;
+    (m.ev||[]).forEach(function(x){ev.push({t:x.t,sid:m.sid,y:x.y,k:x.k,s:x.s,r:x.r});});
+  });
+  var h='<div class="card"><div class="row sp"><h3 style="margin:0">Аналитика интерфейса</h3><button class="btn bad sm" data-a="statClear">Очистить аналитику</button></div><div class="grid2" style="margin-top:10px">'
+   +'<div><div class="mut">Сессий (открытий страницы)</div><h2>'+all.length+'</h2><div class="mut">активны сейчас: '+active+'</div></div>'
+   +'<div><div class="mut">Кликов / ошибок / кликов мимо</div><h2>'+nClicks+' / '+nErr+' / '+nMiss+'</h2></div></div>'
+   +'<div class="mut">Сессия начинается при каждом открытии страницы. «Ушли» — сессия без действий больше 2 минут. Клики на этой вкладке не считаются.'+(DBREF?'':' Сейчас учитываются только сессии этого браузера.')+'</div></div>';
+  /* воронка по данным */
+  var st=S.students,booked=st.length;
+  var trialDone=st.filter(function(s){return S.lessons.some(function(l){return l.studentId===s.id&&l.type==='trial'&&l.status==='done';});});
+  var paid=st.filter(function(s){return S.payments.some(function(p){return p.studentId===s.id;});});
+  var sched=st.filter(function(s){return S.lessons.some(function(l){return l.studentId===s.id&&l.type==='regular';});});
+  var stuck=paid.filter(function(s){return s.credits>0&&!S.lessons.some(function(l){return l.studentId===s.id&&l.status==='planned';});});
+  var fn=[['Записались на пробный',booked],['Пробный проведён',trialDone.length],['Купили пакет',paid.length],['Выбрали время уроков пакета',sched.length]];
+  h+='<div class="card"><h3>Путь клиента (по данным теста)</h3>'+fn.map(function(f){return '<div style="margin:8px 0"><div class="row sp"><span>'+f[0]+'</span><b>'+f[1]+(booked?' <span class="mut">('+Math.round(f[1]/booked*100)+'%)</span>':'')+'</b></div>'+bar(f[1],booked)+'</div>';}).join('')
+   +(stuck.length?'<div class="note"><b>Застряли после оплаты:</b> '+stuck.length+' — заплатили, но не выбрали время ('+stuck.map(function(s){return esc(s.name);}).join(', ')+').</div>':'')+'</div>';
+  /* клики */
+  var ck=Object.keys(clicks).sort(function(a,b){return clicks[b].n-clicks[a].n;}),cmax=ck.length?clicks[ck[0]].n:0;
+  h+='<div class="card"><h3>Куда кликают</h3>'+(ck.length?'<table><tr><th>Действие</th><th style="width:60px">Раз</th><th style="width:70px">Сессий</th><th style="width:140px"></th></tr>'+ck.slice(0,30).map(function(k){return '<tr><td>'+esc(k.indexOf('link|')===0?k.slice(5):lbl(k))+'</td><td>'+clicks[k].n+'</td><td>'+clicks[k].s+'</td><td>'+bar(clicks[k].n,cmax)+'</td></tr>';}).join('')+'</table>':'<div class="empty">Кликов пока нет.</div>');
+  var unused=CORE.filter(function(k){return !clicks[k];});
+  h+=(unused.length&&all.length?'<div class="note"><b>Ни разу не нажимали:</b> '+unused.map(function(k){return esc(lbl(k));}).join('; ')+'</div>':'')+'</div>';
+  /* ошибки */
+  var ek=Object.keys(errs).sort(function(a,b){return errs[b].n-errs[a].n;});
+  h+='<div class="card"><h3>Где выходят ошибки</h3>'+(ek.length?'<table><tr><th>Ошибка</th><th>Экран</th><th>Тип</th><th style="width:50px">Раз</th><th style="width:60px">Сессий</th></tr>'+ek.map(function(k){var e=errs[k];return '<tr><td>'+esc(e.msg)+'</td><td>'+esc(scrLbl(e.scr))+'</td><td>'+(e.kind==='js'?'<span class="chip bad">сбой кода</span>':e.kind==='sync'?'<span class="chip warn">база</span>':'<span class="chip warn">проверка формы</span>')+'</td><td>'+e.n+'</td><td>'+e.s+'</td></tr>';}).join('')+'</table>':'<div class="empty">Ошибок не было.</div>')+'</div>';
+  /* выходы */
+  var vk=Object.keys(views).sort(function(a,b){return (ended[b]||0)-(ended[a]||0)||views[b]-views[a];});
+  h+='<div class="card"><h3>Где уходят</h3>'+(vk.length?'<table><tr><th>Экран</th><th style="width:70px">Заходов</th><th style="width:90px">Ушли здесь</th><th style="width:60px">Доля</th></tr>'+vk.map(function(k){var e=ended[k]||0;return '<tr><td>'+esc(scrLbl(k))+'</td><td>'+views[k]+'</td><td>'+e+'</td><td>'+Math.round(e/views[k]*100)+'%</td></tr>';}).join('')+'</table>':'<div class="empty">Данных нет.</div>')+'</div>';
+  /* мимо */
+  var mk=Object.keys(miss).sort(function(a,b){return miss[b].n-miss[a].n;});
+  h+='<div class="card"><h3>Клики мимо кнопок</h3><div class="mut">Куда нажимали, где ничего не происходит: возможно, там ждут кнопку.</div>'+(mk.length?'<table><tr><th>Куда</th><th>Экран</th><th style="width:50px">Раз</th></tr>'+mk.slice(0,12).map(function(k){return '<tr><td>'+esc(miss[k].txt)+'</td><td>'+esc(scrLbl(miss[k].scr))+'</td><td>'+miss[k].n+'</td></tr>';}).join('')+'</table>':'<div class="empty">Нет.</div>')+'</div>';
+  /* лента */
+  ev.sort(function(a,b){return b.t-a.t;});
+  h+='<div class="card"><h3>Последние события</h3>'+(ev.length?'<table><tr><th style="width:70px">Время</th><th style="width:60px">Сессия</th><th>Событие</th><th>Экран</th></tr>'+ev.slice(0,40).map(function(x){return '<tr><td>'+hm(x.t)+'</td><td>'+esc(String(x.sid).slice(0,4))+'</td><td>'+(x.y==='e'?'<span class="chip bad">ошибка</span> ':x.y==='m'?'<span class="chip warn">мимо</span> ':'')+esc(x.y==='c'?(x.k.indexOf('link|')===0?x.k.slice(5):lbl(x.k)):x.k)+'</td><td>'+esc(scrLbl(x.s))+'</td></tr>';}).join('')+'</table>':'<div class="empty">Нет.</div>')+'</div>';
+  return h;
+}
+
+/* ---------- каркас ---------- */
+function render(){
+  save();
+  var body='';
+  if(S.room&&les(S.room))body=roomView();
+  else body=S.role==='client'?clientView():S.role==='teacher'?teacherView():adminView();
+  $('#app').innerHTML=topBar()+body+feed();
+  trackView();
+}
+function topBar(){
+  var r=function(k,n){return '<button class="'+(S.role===k?'on':'')+'" data-a="role" data-k="'+k+'">'+n+'</button>';};
+  return '<div class="banner"><span><b>Тестовый прототип.</b> Оплата и сообщения ненастоящие. <span class="syncmsg">'+syncText()+'</span></span><button class="btn sec sm" data-a="reset">'+(syncState==='online'?'Сбросить тест (для всех)':'Сбросить тест')+'</button></div>'
+   +'<div class="roles">'+r('client','Клиент')+r('teacher','Учитель (Мария)')+r('admin','Администратор (Фаррух)')+'</div>'
+   +'<details class="card"><summary>Как проверить весь путь</summary><ol class="mut"><li><b>Клиент:</b> выберите язык, запишитесь на пробный урок.</li><li><b>Учитель:</b> откройте урок, добавьте пометки, завершите урок.</li><li><b>Клиент:</b> купите пакет, выберите время всех уроков.</li><li><b>Учитель:</b> проведите урок из пакета; посмотрите заработок.</li><li><b>Администратор:</b> подтвердите язык, выплатите, разберите спор.</li></ol></details>';
+}
+function feed(){
+  if(!S.msgs.length)return '';
+  return '<details class="card"><summary>Исходящие сообщения (имитация Telegram и почты): '+S.msgs.length+'</summary>'
+   +S.msgs.slice(0,30).map(function(m){return '<div class="mut" style="padding:3px 0">'+esc(m.t)+' → <b>'+esc(m.to)+'</b>: '+esc(m.text)+'</div>';}).join('')+'</details>';
+}
+
+/* ---------- клиент ---------- */
+function clientView(){
+  var sc=S.cv.screen;
+  if(sc==='landing')return landing();
+  if(sc==='book')return bookView();
+  if(sc==='request')return requestView();
+  if(sc==='requestDone')return '<div class="card"><h2>Заявка принята</h2><p>Администратор подберёт проверенного учителя и напишет вам. Это и есть путь клиента от платформы.</p><button class="btn" data-a="cGo" data-s="landing">На главную</button></div>';
+  if(sc==='pay')return payView();
+  if(sc==='schedule')return scheduleView();
+  return cabView();
+}
+function landing(){
+  var t=T(),vl=verifiedLangs(t);
+  var h='<div class="card"><div class="row"><div style="width:56px;height:56px;border-radius:50%;background:var(--accbg);display:flex;align-items:center;justify-content:center;font-size:24px">М</div><div><h1 style="margin:0">'+esc(t.name)+'</h1><div class="mut">платформа/maria · учитель языков</div></div></div>'
+   +'<p>Языки и цены за урок (60 минут):</p><table><tr><th>Язык</th><th>Цена</th><th>Статус</th></tr>'
+   +t.langs.map(function(l){return '<tr><td>'+esc(l.lang)+'</td><td>'+usd(l.price)+'</td><td>'+statusChip(l)+'</td></tr>';}).join('')+'</table>'
+   +'<p class="mut">Записаться можно на языки со значком «Проверен».</p>'
+   +(vl.length?'<label>Язык</label><select id="c-lang">'+vl.map(function(l){return '<option>'+esc(l.lang)+'</option>';}).join('')+'</select>'
+   +'<p><button class="btn" data-a="cBookStart">Записаться на пробный урок</button></p>':'<p class="empty">Пока нет проверенных языков.</p>')
+   +'</div>';
+  h+='<div class="card"><h3>Нет своего учителя?</h3><p class="mut">Оставьте заявку: администратор подберёт проверенного учителя.</p><button class="btn sec" data-a="cGo" data-s="request">Оставить заявку</button></div>';
+  if(S.students.length){
+    h+='<div class="card"><h3>Войти как существующий клиент</h3><p class="mut">В жизни вход идёт по ссылке из сообщения. В тесте выберите клиента:</p><div class="row">'
+     +S.students.map(function(s){return '<button class="btn sec sm" data-a="cLogin" data-id="'+s.id+'">'+esc(s.name)+'</button>';}).join('')+'</div></div>';
+  }
+  return h;
+}
+function bookView(){
+  var t=T(),slots=genSlots('maria'),lang=S.cv.lang;
+  return '<div class="card"><button class="btn sec sm" data-a="cGo" data-s="landing">← Назад</button><h2 style="margin-top:10px">Пробный урок: '+esc(lang)+'</h2>'
+   +'<p class="mut">Бесплатно для клиента. Кто платит учителю за пробный урок — решение ещё не принято (см. настройки администратора).</p>'
+   +'<label>Ваше имя</label><input id="b-name" placeholder="Например, Мартин">'
+   +'<label>Как вам написать (Telegram, WhatsApp или почта)</label><input id="b-contact" placeholder="@username или почта">'
+   +'<label>Время</label>'+(slots.length?'<div class="slots">'+slots.slice(0,24).map(function(s,i){return '<label class="slot"><input type="radio" name="b-slot" value="'+s+'"'+(i===0?' checked':'')+'> '+slotLabel(s)+'</label>';}).join('')+'</div>':'<p class="empty">Нет свободного времени.</p>')
+   +'<p><button class="btn" data-a="cBook"'+(slots.length?'':' disabled')+'>Записаться</button></p><p class="mut">Регистрация не нужна: вход в кабинет будет по ссылке из сообщения.</p></div>';
+}
+function requestView(){
+  var langs=['Английский','Русский','Узбекский','Немецкий','Испанский','Корейский'];
+  return '<div class="card"><button class="btn sec sm" data-a="cGo" data-s="landing">← Назад</button><h2 style="margin-top:10px">Заявка на подбор учителя</h2>'
+   +'<label>Имя</label><input id="r-name"><label>Контакт</label><input id="r-contact" placeholder="@username или почта">'
+   +'<label>Язык</label><select id="r-lang">'+langs.map(function(l){return '<option>'+l+'</option>';}).join('')+'</select>'
+   +'<label>Цель</label><input id="r-goal" placeholder="Например, английский для работы"><p><button class="btn" data-a="cRequest">Отправить заявку</button></p></div>';
+}
+function cabView(){
+  var s=stu(S.clientId);
+  if(!s){S.cv={screen:'landing'};return landing();}
+  var t=S.teachers[s.teacherId],L=S.lessons.filter(function(l){return l.studentId===s.id;});
+  var next=L.filter(function(l){return l.status==='planned';}).sort(function(a,b){return a.slot.localeCompare(b.slot);})[0];
+  var past=L.filter(function(l){return l.status!=='planned';}).sort(function(a,b){return b.slot.localeCompare(a.slot);});
+  var trialDone=L.some(function(l){return l.type==='trial'&&l.status==='done';});
+  var price=priceOf(t,s.lang);
+  var h='<div class="card"><div class="row sp"><div><h1 style="margin:0">Здравствуйте, '+esc(s.name)+'</h1><div class="mut">Учитель: '+esc(t.name)+' · '+esc(s.lang)+'</div></div><div><span class="chip">Осталось уроков: '+leftOf(s)+'</span></div></div></div>';
+  if(next){
+    h+='<div class="card"><h3>Ближайший урок</h3><div class="row sp"><div>'+slotLabel(next.slot)+' · '+(next.type==='trial'?'пробный':'урок из пакета')+'</div><button class="btn" data-a="openRoom" data-id="'+next.id+'">Войти на урок</button></div></div>';
+  }else if(s.credits>0){
+    h+='<div class="card"><h3>Выберите время уроков</h3><p>Оплачено уроков без времени: '+s.credits+'.</p><button class="btn" data-a="cGo" data-s="schedule">Выбрать время</button></div>';
+  }
+  if(trialDone||s.paidAny){
+    h+='<div class="card"><h3>Пакеты уроков</h3><div class="grid2">'
+     +[5,10].map(function(n){return '<div class="card" style="margin:0"><b>'+n+' уроков</b><div class="mut">'+usd(price)+' за урок</div><h2 style="margin:6px 0">'+usd(price*n)+'</h2><button class="btn" data-a="cPack" data-n="'+n+'">Купить</button></div>';}).join('')
+     +'</div></div>';
+  }
+  h+='<div class="card"><h3>Общая доска</h3>'+(s.board?'<a href="'+esc(s.board)+'" target="_blank" rel="noopener">Открыть доску</a><div class="mut">Одна доска на вас, остаётся между уроками.</div>':'<div class="mut">Учитель ещё не добавил доску.</div>')+'</div>';
+  h+='<div class="card"><h3>Прошедшие уроки</h3>';
+  if(!past.length)h+='<div class="empty">Пока нет.</div>';
+  past.forEach(function(l){
+    var disp=S.disputes.find(function(d){return d.lessonId===l.id;});
+    h+='<div style="border-top:1px solid var(--line);padding:8px 0"><div class="row sp"><b>'+slotLabel(l.slot)+'</b>'+statusLesson(l)+'</div>'
+     +(l.summary?'<div><span class="mut">Итог урока:</span> '+esc(l.summary)+'</div>':'')
+     +(l.shared?'<div><span class="mut">Заметки учителя:</span> '+esc(l.shared)+'</div>':'')
+     +(l.homework?'<div><span class="mut">Домашнее задание:</span> '+esc(l.homework)+'</div>':'');
+    if(l.status==='done'&&!disp)h+='<details><summary>Пожаловаться на урок</summary><textarea id="dr-'+l.id+'" placeholder="Что пошло не так?"></textarea><button class="btn bad sm" data-a="cDispute" data-id="'+l.id+'">Отправить администратору</button></details>';
+    if(disp)h+='<div class="note">Жалоба: '+esc(disp.text)+' — '+(disp.status==='open'?'рассматривается':disp.status==='returned'?'урок возвращён':'отклонена')+'</div>';
+    h+='</div>';
+  });
+  return h+'</div>';
+}
+function payView(){
+  var s=stu(S.clientId),t=S.teachers[s.teacherId],n=S.cv.n,price=priceOf(t,s.lang);
+  return '<div class="card"><button class="btn sec sm" data-a="cGo" data-s="cab">← Назад</button><h2 style="margin-top:10px">Оплата: пакет '+n+' уроков</h2>'
+   +'<div class="row sp"><span>'+n+' × '+usd(price)+'</span><b>'+usd(price*n)+'</b></div>'
+   +'<label>Карта</label>'+['Visa','Mastercard','Humo','Uzcard'].map(function(m,i){return '<label class="slot" style="margin:4px 0"><input type="radio" name="p-m" value="'+m+'"'+(i===0?' checked':'')+'> '+m+'</label>';}).join('')
+   +'<div class="note">Тест: здесь открылась бы страница платёжного сервиса. Номер карты вводится только там и у нас не хранится. Ничего не списывается.</div>'
+   +'<p class="mut">Открытые вопросы: принимает ли эквайер иностранные карты, в какой валюте списывает, сколько стоит конвертация.</p>'
+   +'<button class="btn" data-a="cPay">Подтвердить тестовую оплату</button></div>';
+}
+function scheduleView(){
+  var s=stu(S.clientId),slots=genSlots(s.teacherId);
+  return '<div class="card"><h2>Оплата прошла. Выберите время уроков</h2><p>Уроков без времени: <b>'+s.credits+'</b>. Выберите до '+s.credits+' слотов.</p>'
+   +(slots.length?'<div class="slots">'+slots.slice(0,40).map(function(x){return '<label class="slot"><input type="checkbox" name="sl" value="'+x+'"> '+slotLabel(x)+'</label>';}).join('')+'</div>':'<p class="empty">Нет свободного времени.</p>')
+   +'<p class="row"><button class="btn" data-a="cSchedule">Сохранить время</button><button class="btn sec" data-a="cGo" data-s="cab">Выберу позже</button></p></div>';
+}
+
+/* ---------- учитель ---------- */
+function teacherView(){
+  var t=T(),tab=S.tv.tab;
+  var tb=function(k,n){return '<button class="'+(tab===k?'on':'')+'" data-a="tTab" data-k="'+k+'">'+n+'</button>';};
+  var h='<div class="tabs">'+tb('students','Ученики')+tb('schedule','Расписание')+tb('profile','Профиль и языки')+tb('money','Заработок')+'</div>';
+  if(tab==='students')return h+(S.tv.studentId?studentPage():studentsTab());
+  if(tab==='schedule')return h+scheduleTab();
+  if(tab==='profile')return h+profileTab();
+  return h+moneyTab();
+}
+function studentsTab(){
+  var h='<div class="card"><h3>Приглашайте своих учеников</h3><p>Ваша ссылка: <b>платформа/maria</b></p><p class="mut">Ученик записывается и платит без регистрации. Для вас — 0% с урока своих учеников; плата за инструмент — открытый вопрос.</p></div>';
+  h+='<div class="card"><h3>Ученики</h3>';
+  if(!S.students.length)h+='<div class="empty">Пока никого. Запишитесь как клиент на вкладке «Клиент».</div>';
+  else h+='<table><tr><th>Имя</th><th>Язык</th><th>Откуда</th><th>Осталось</th><th></th></tr>'+S.students.map(function(s){
+    return '<tr><td>'+esc(s.name)+'</td><td>'+esc(s.lang)+'</td><td>'+(s.source==='own'?'<span class="chip">свой</span>':'<span class="chip warn">от платформы</span>')+'</td><td>'+leftOf(s)+'</td><td><button class="btn sec sm" data-a="tStudent" data-id="'+s.id+'">Открыть</button></td></tr>';
+  }).join('')+'</table>';
+  return h+'</div>';
+}
+function studentPage(){
+  var s=stu(S.tv.studentId);
+  var L=S.lessons.filter(function(l){return l.studentId===s.id;}).sort(function(a,b){return a.slot.localeCompare(b.slot);});
+  var h='<div class="card"><button class="btn sec sm" data-a="tStudent" data-id="">← Все ученики</button><h2 style="margin-top:10px">'+esc(s.name)+' · '+esc(s.lang)+'</h2><div class="mut">'+esc(s.contact)+' · осталось уроков: '+leftOf(s)+'</div>'
+   +'<label>Общая доска ученика (ссылка на внешнюю доску)</label><div class="row"><input id="board" value="'+esc(s.board)+'" placeholder="https://..." style="flex:1"><button class="btn sec" data-a="saveBoard" data-id="'+s.id+'">Сохранить</button></div></div>';
+  h+='<div class="card"><h3>Уроки</h3>';
+  if(!L.length)h+='<div class="empty">Нет уроков.</div>';
+  L.forEach(function(l){
+    h+='<div style="border-top:1px solid var(--line);padding:8px 0"><div class="row sp"><b>'+slotLabel(l.slot)+' · '+(l.type==='trial'?'пробный':'из пакета')+'</b>'+statusLesson(l)+'</div>';
+    if(l.status==='planned')h+='<p><button class="btn sm" data-a="openRoom" data-id="'+l.id+'">Открыть комнату урока</button></p>';
+    h+=notesForm(l)+'</div>';
+  });
+  return h+'</div>';
+}
+function notesForm(l){
+  return '<details><summary>Заметки и домашнее задание</summary>'
+   +'<label>Личные заметки (ученик не видит)</label><textarea id="np-'+l.id+'">'+esc(l.priv)+'</textarea>'
+   +'<label>Заметки для ученика</label><textarea id="ns-'+l.id+'">'+esc(l.shared)+'</textarea>'
+   +'<label>Домашнее задание</label><textarea id="nh-'+l.id+'">'+esc(l.homework)+'</textarea>'
+   +'<p><button class="btn sec sm" data-a="saveNotes" data-id="'+l.id+'">Сохранить</button></p></details>';
+}
+function scheduleTab(){
+  var L=S.lessons.filter(function(l){return l.status==='planned';}).sort(function(a,b){return a.slot.localeCompare(b.slot);});
+  var h='<div class="card"><h3>Ближайшие уроки</h3>';
+  if(!L.length)h+='<div class="empty">Нет запланированных уроков.</div>';
+  L.forEach(function(l){var s=stu(l.studentId);h+='<div class="row sp" style="border-top:1px solid var(--line);padding:8px 0"><div><b>'+slotLabel(l.slot)+'</b> · '+esc(s.name)+' · '+esc(s.lang)+' · '+(l.type==='trial'?'пробный':'из пакета')+'</div><button class="btn sm" data-a="openRoom" data-id="'+l.id+'">Открыть комнату</button></div>';});
+  return h+'</div>';
+}
+function profileTab(){
+  var t=T();
+  var h='<div class="card"><h3>Видеозвонок и выплаты</h3><label>Ссылка на видеозвонок (Meet, Zoom, Телемост — любая)</label><input id="p-video" value="'+esc(t.video)+'">'
+   +'<label>Карта для выплат (Humo или Uzcard, в сумах)</label><input id="p-card" value="'+esc(t.card)+'"><p><button class="btn sec" data-a="saveProfile">Сохранить</button></p></div>';
+  h+='<div class="card"><h3>Языки и цены ($ за урок)</h3><table><tr><th>Язык</th><th>Цена</th><th>Статус проверки</th></tr>'
+   +t.langs.map(function(l,i){return '<tr><td>'+esc(l.lang)+'</td><td><input id="pr-'+i+'" type="number" min="1" value="'+l.price+'" style="width:80px"></td><td>'+statusChip(l)+'</td></tr>';}).join('')+'</table>'
+   +'<p><button class="btn sec" data-a="savePrices">Сохранить цены</button></p>'
+   +'<div class="row"><input id="nl-lang" placeholder="Новый язык" style="flex:1"><input id="nl-price" type="number" placeholder="Цена $" style="width:100px"><button class="btn" data-a="addLang">Добавить на проверку</button></div></div>';
+  h+='<div class="card"><h3>Расписание (часы приёма)</h3><table><tr><th>День</th><th>Работаю</th><th>С</th><th>До</th></tr>'
+   +DAYS.map(function(d,i){var a=t.avail[i];return '<tr><td>'+d+'</td><td><input type="checkbox" id="av-on-'+i+'"'+(a?' checked':'')+'></td><td><input id="av-f-'+i+'" type="number" min="6" max="22" value="'+(a?a[0]:10)+'" style="width:70px"></td><td><input id="av-t-'+i+'" type="number" min="7" max="23" value="'+(a?a[1]:18)+'" style="width:70px"></td></tr>';}).join('')+'</table>'
+   +'<p><button class="btn sec" data-a="saveAvail">Сохранить расписание</button></p></div>';
+  return h;
+}
+function moneyTab(){
+  var t=T(),L=S.lessons.filter(function(l){return l.teacherId===t.id&&l.status==='done';});
+  var h='<div class="card"><h3>Заработок</h3><div class="grid2"><div><div class="mut">К выплате</div><h2>'+usd(balanceOf(t))+'</h2><div class="mut">'+som(balanceOf(t))+' (тестовый курс)</div></div><div><div class="mut">Выплачено</div><h2>'+usd(t.paidOut)+'</h2></div></div>'
+   +'<p><button class="btn" data-a="reqPayout"'+(balanceOf(t)>0&&!t.payoutReq?'':' disabled')+'>'+(t.payoutReq?'Запрос отправлен':'Запросить выплату')+'</button></p><div class="mut">Выплата на карту: '+esc(t.card)+'</div></div>';
+  h+='<div class="card"><h3>По урокам</h3>';
+  if(!L.length)h+='<div class="empty">Пока нет проведённых уроков.</div>';
+  else h+='<table><tr><th>Урок</th><th>Ученик</th><th>Цена</th><th>Вам</th></tr>'+L.map(function(l){var s=stu(l.studentId);return '<tr><td>'+slotLabel(l.slot)+(l.type==='trial'?' (пробный)':'')+'</td><td>'+esc(s.name)+' '+(s.source==='own'?'<span class="chip">свой</span>':'<span class="chip warn">от платформы −'+S.settings.commission+'%</span>')+'</td><td>'+usd(l.price)+'</td><td>'+usd(l.earned)+'</td></tr>';}).join('')+'</table>';
+  return h+'</div>';
+}
+
+/* ---------- комната урока ---------- */
+function roomView(){
+  var l=les(S.room),s=stu(l.studentId),t=S.teachers[l.teacherId],isT=S.role==='teacher';
+  var marks=l.marks||[];
+  var h='<div class="card"><div class="row sp"><button class="btn sec sm" data-a="closeRoom">← Выйти из комнаты</button>'+statusLesson(l)+'</div><h2 style="margin-top:10px">Урок: '+slotLabel(l.slot)+'</h2><div class="mut">'+esc(s.name)+' · '+esc(t.name)+' · '+esc(s.lang)+'</div></div>';
+  h+='<div class="grid2"><div class="card"><h3>Видеозвонок</h3><p><a href="'+esc(t.video)+'" target="_blank" rel="noopener">Открыть видеозвонок</a></p><div class="mut">Звонок идёт во внешнем сервисе, на другой вкладке.'+(isT?' Чтобы показать экран, нажмите «Показать экран» в самом звонке.':'')+'</div></div>'
+   +'<div class="card"><h3>Общая доска</h3>'+(s.board?'<p><a href="'+esc(s.board)+'" target="_blank" rel="noopener">Открыть доску ученика</a></p><div class="mut">Одна постоянная доска на ученика.</div>':'<div class="mut">Доска не добавлена'+(isT?': добавьте ссылку на странице ученика.':'.')+'</div>')+'</div></div>';
+  h+='<div class="card"><h3>Пометки урока <span class="chip warn">опыт: так выглядела бы своя доска</span></h3>';
+  if(!marks.length)h+='<div class="empty">Пометок нет.</div>';
+  marks.forEach(function(m){var c={'Ошибка':'bad','Важно':'warn','Выучено':'ok'}[m.tag];h+='<div class="mark"><span class="chip '+c+'">'+m.tag+'</span><span>'+esc(m.text)+'</span></div>';});
+  if(isT&&l.status==='planned')h+='<div class="row" style="margin-top:8px"><select id="mk-tag" style="width:130px"><option>Ошибка</option><option>Важно</option><option>Выучено</option></select><input id="mk-text" placeholder="Фраза или правило" style="flex:1"><button class="btn sec" data-a="addMark">Добавить</button></div>';
+  var err=marks.filter(function(m){return m.tag==='Ошибка';});
+  if(err.length)h+='<div class="note"><b>Что повторить:</b> '+err.map(function(m){return esc(m.text);}).join('; ')+'</div>';
+  h+='</div>';
+  if(isT){
+    h+='<div class="card"><h3>Заметки и домашнее задание</h3>'+notesForm(l).replace('<details>','<details open>')+'</div>';
+    if(l.status==='planned'){
+      if(!S.fin)h+='<div class="card row"><button class="btn" data-a="finStart">Завершить урок</button><button class="btn bad" data-a="noShow" data-id="'+l.id+'">Ученик не пришёл</button></div>';
+      else{
+        var draft=err.length?'Повторить: '+err.map(function(m){return m.text;}).join('; ')+'.':'';
+        h+='<div class="card"><h3>Итог урока</h3><label>Что прошли (получит ученик)</label><textarea id="f-sum">'+esc(l.shared||draft)+'</textarea><label>Домашнее задание (черновик из пометок)</label><textarea id="f-hw">'+esc(l.homework||draft)+'</textarea>'
+         +'<p class="row"><button class="btn" data-a="finDone" data-id="'+l.id+'">Отправить итог и завершить</button><button class="btn sec" data-a="finCancel">Отмена</button></p></div>';
+      }
+    }
+  }else if(l.status==='done'&&(l.summary||l.homework)){
+    h+='<div class="card"><h3>Итог урока</h3><div>'+esc(l.summary)+'</div><div class="mut">Домашнее задание: '+esc(l.homework)+'</div></div>';
+  }
+  return h;
+}
+
+/* ---------- администратор ---------- */
+function adminView(){
+  var tab=S.av.tab;
+  var tb=function(k,n){return '<button class="'+(tab===k?'on':'')+'" data-a="aTab" data-k="'+k+'">'+n+'</button>';};
+  var h='<div class="tabs">'+tb('verify','Проверка и приглашения')+tb('requests','Заявки клиентов')+tb('payouts','Выплаты')+tb('disputes','Споры')+tb('trials','Пробные')+tb('settings','Настройки')+tb('analytics','Аналитика')+'</div>';
+  if(tab==='analytics')return h+analyticsTab();
+  if(tab==='verify')return h+verifyTab();
+  if(tab==='requests')return h+requestsTab();
+  if(tab==='payouts')return h+payoutsTab();
+  if(tab==='disputes')return h+disputesTab();
+  if(tab==='trials')return h+trialsTab();
+  return h+settingsTab();
+}
+function verifyTab(){
+  var t=T(),h='<div class="card"><h3>Языки на проверке</h3>',n=0;
+  t.langs.forEach(function(l,i){
+    if(l.status==='verified'||l.status==='rejected')return;
+    n++;
+    h+='<div style="border-top:1px solid var(--line);padding:8px 0"><div class="row sp"><div><b>'+esc(t.name)+'</b> · '+esc(l.lang)+' · '+usd(l.price)+' '+statusChip(l)+'</div><div class="row"><button class="btn sm" data-a="aVerify" data-i="'+i+'" data-st="verified">Подтвердить</button><button class="btn sec sm" data-a="aVerify" data-i="'+i+'" data-st="test">Проверочный урок</button></div></div>'
+     +'<div class="row" style="margin-top:6px"><input id="rj-'+i+'" placeholder="Причина отказа" style="flex:1"><button class="btn bad sm" data-a="aReject" data-i="'+i+'">Отказать</button></div></div>';
+  });
+  if(!n)h+='<div class="empty">Нет языков на проверке.</div>';
+  h+='</div><div class="card"><h3>Приглашение учителей</h3><p class="mut">Ссылка с меткой канала показывает, откуда пришёл учитель.</p><div class="row"><input id="inv-ch" placeholder="Канал: instagram, telegram, знакомые" style="flex:1"><button class="btn" data-a="aInvite">Создать ссылку</button></div>'
+   +S.invites.map(function(x){return '<div class="mut" style="padding:3px 0">платформа/join?src='+esc(x)+'</div>';}).join('')+'</div>';
+  return h;
+}
+function requestsTab(){
+  var t=T(),h='<div class="card"><h3>Заявки клиентов</h3>';
+  if(!S.requests.length)h+='<div class="empty">Нет заявок. Оставьте заявку на вкладке «Клиент».</div>';
+  S.requests.forEach(function(r){
+    var vl=verifiedLangs(t).some(function(l){return l.lang===r.lang;});
+    h+='<div style="border-top:1px solid var(--line);padding:8px 0"><div class="row sp"><div><b>'+esc(r.name)+'</b> · '+esc(r.lang)+' · '+esc(r.goal)+'<div class="mut">'+esc(r.contact)+'</div></div>'
+     +(r.done?'<span class="chip ok">Подобран</span>':vl?'<button class="btn sm" data-a="aMatch" data-id="'+r.id+'">Подобрать: '+esc(t.name)+'</button>':'<span class="chip warn">Нет проверенного учителя по языку</span>')+'</div></div>';
+  });
+  return h+'</div><div class="note">Клиент, подобранный платформой, получает пометку «от платформы»: с его уроков удерживается комиссия (размер в настройках, 12% — пример).</div>';
+}
+function payoutsTab(){
+  var t=T(),b=balanceOf(t);
+  return '<div class="card"><h3>Очередь выплат</h3><table><tr><th>Учитель</th><th>Заработано</th><th>Выплачено</th><th>К выплате</th><th></th></tr><tr><td>'+esc(t.name)+(t.payoutReq?' <span class="chip warn">запросила</span>':'')+'<div class="mut">'+esc(t.card)+'</div></td><td>'+usd(earnedOf(t))+'</td><td>'+usd(t.paidOut)+'</td><td><b>'+usd(b)+'</b><div class="mut">'+som(b)+'</div></td><td><button class="btn sm" data-a="aPay"'+(b>0?'':' disabled')+'>Выплатить</button></td></tr></table>'
+   +'<p class="mut">Сейчас выплаты вручную. Принято в поступлениях от клиентов: '+usd(S.payments.reduce(function(a,p){return a+p.amount;},0))+'.</p></div>';
+}
+function disputesTab(){
+  var h='<div class="card"><h3>Споры</h3>';
+  if(!S.disputes.length)h+='<div class="empty">Нет споров. Клиент жалуется на проведённый урок из своего кабинета.</div>';
+  S.disputes.forEach(function(d){
+    var l=les(d.lessonId),s=stu(l.studentId);
+    h+='<div style="border-top:1px solid var(--line);padding:8px 0"><div class="row sp"><div><b>'+esc(s.name)+'</b> · '+slotLabel(l.slot)+'<div>«'+esc(d.text)+'»</div></div><span class="chip '+(d.status==='open'?'warn':d.status==='returned'?'ok':'bad')+'">'+(d.status==='open'?'Открыт':d.status==='returned'?'Урок возвращён':'Отклонён')+'</span></div>';
+    if(d.status==='open'){
+      if(d.opened)h+='<div class="note"><b>Материалы урока.</b> Пометки: '+((l.marks||[]).map(function(m){return esc(m.tag)+': '+esc(m.text);}).join('; ')||'нет')+'. Итог: '+esc(l.summary||'нет')+'. Звонок был во внешнем сервисе, поэтому прямых доказательств нет.</div>'
+       +'<div class="row"><button class="btn sm" data-a="aResolve" data-id="'+d.id+'" data-r="returned">Вернуть урок ученику</button><button class="btn bad sm" data-a="aResolve" data-id="'+d.id+'" data-r="rejected">Отклонить</button></div>';
+      else h+='<button class="btn sec sm" data-a="aOpenDispute" data-id="'+d.id+'">Открыть материалы урока</button>';
+    }
+    h+='</div>';
+  });
+  h+='</div><div class="card"><h3>Журнал доступа</h3><div class="mut">Каждое открытие материалов урока записывается: кто, когда, зачем.</div>';
+  h+=S.log.length?S.log.map(function(x){return '<div class="mut" style="padding:3px 0">'+esc(x)+'</div>';}).join(''):'<div class="empty">Пока пусто.</div>';
+  return h+'</div>';
+}
+function trialsTab(){
+  var t=T(),trials=S.lessons.filter(function(l){return l.type==='trial'&&l.status==='done';}),ids=[];
+  trials.forEach(function(l){if(ids.indexOf(l.studentId)<0)ids.push(l.studentId);});
+  var conv=ids.filter(function(i){return S.payments.some(function(p){return p.studentId===i;});}).length;
+  return '<div class="card"><h3>Пробный урок → пакет</h3><table><tr><th>Учитель</th><th>Пробных проведено</th><th>Купили пакет</th><th>Доля</th></tr><tr><td>'+esc(t.name)+'</td><td>'+ids.length+'</td><td>'+conv+'</td><td>'+(ids.length?Math.round(conv/ids.length*100)+'%':'—')+'</td></tr></table>'
+   +'<p class="mut">По этой доле решаем, кто платит за пробный урок и нужен ли недельный лимит.</p></div>';
+}
+function settingsTab(){
+  var s=S.settings;
+  return '<div class="card"><h3>Настройки (рабочие допущения для теста)</h3>'
+   +'<label>Комиссия с клиентов от платформы, % (12 — пример, не решение)</label><input id="s-com" type="number" min="0" max="100" value="'+s.commission+'">'
+   +'<label>Сколько платформа платит учителю за пробный урок, $ (решение не принято)</label><input id="s-trial" type="number" min="0" value="'+s.trialPay+'">'
+   +'<label>Тестовый курс, сум за $1 (не реальный курс)</label><input id="s-rate" type="number" min="1" value="'+s.rate+'">'
+   +'<p><button class="btn" data-a="aSettings">Сохранить</button></p></div>';
+}
+
+/* ---------- действия ---------- */
+var A={
+  role:function(d){S.role=d.k;S.room=null;S.fin=false;},
+  reset:function(){S=fresh();},
+  cGo:function(d){S.cv={screen:d.s};},
+  cBookStart:function(){S.cv={screen:'book',lang:val('c-lang')};},
+  cBook:function(){
+    var name=val('b-name'),contact=val('b-contact'),r=document.querySelector('input[name=b-slot]:checked');
+    if(!name||!contact||!r){alert2('Заполните имя, контакт и выберите время.');return false;}
+    var s={id:nid(),name:name,contact:contact,teacherId:'maria',lang:S.cv.lang,source:'own',credits:0,board:'',paidAny:false};
+    S.students.push(s);S.clientId=s.id;
+    S.lessons.push({id:nid(),studentId:s.id,teacherId:'maria',slot:r.value,type:'trial',status:'planned',priv:'',shared:'',homework:'',marks:[],summary:'',price:0,earned:0});
+    say(name+' ('+contact+')','Вы записаны на пробный урок: '+slotLabel(r.value)+'. Вход в кабинет по этой ссылке, регистрация не нужна.');
+    say('Мария','Новая запись на пробный урок: '+name+', '+S.cv.lang+', '+slotLabel(r.value)+'.');
+    S.cv={screen:'cab'};
+  },
+  cRequest:function(){
+    var n=val('r-name'),c=val('r-contact');
+    if(!n||!c){alert2('Заполните имя и контакт.');return false;}
+    S.requests.push({id:nid(),name:n,contact:c,lang:val('r-lang'),goal:val('r-goal')||'не указана',done:false});
+    say('Администратор','Новая заявка клиента: '+n+', '+val('r-lang')+'.');
+    S.cv={screen:'requestDone'};
+  },
+  cLogin:function(d){S.clientId=Number(d.id);S.cv={screen:'cab'};},
+  cPack:function(d){S.cv={screen:'pay',n:Number(d.n)};},
+  cPay:function(){
+    var s=stu(S.clientId),n=S.cv.n,price=priceOf(S.teachers[s.teacherId],s.lang),m=document.querySelector('input[name=p-m]:checked');
+    S.payments.push({id:nid(),studentId:s.id,amount:price*n,method:m?m.value:'Visa'});
+    s.credits+=n;s.paidAny=true;
+    say(s.name,'Оплата получена: пакет '+n+' уроков, '+usd(price*n)+'. Выберите время уроков.');
+    say('Мария','Ученик '+s.name+' оплатил пакет '+n+' уроков.');
+    S.cv={screen:'schedule'};
+  },
+  cSchedule:function(){
+    var s=stu(S.clientId),ch=Array.prototype.slice.call(document.querySelectorAll('input[name=sl]:checked'));
+    if(!ch.length){alert2('Отметьте хотя бы один слот или нажмите «Выберу позже».');return false;}
+    if(ch.length>s.credits){alert2('Можно выбрать не больше '+s.credits+'.');return false;}
+    ch.forEach(function(c){S.lessons.push({id:nid(),studentId:s.id,teacherId:s.teacherId,slot:c.value,type:'regular',status:'planned',priv:'',shared:'',homework:'',marks:[],summary:'',price:0,earned:0});});
+    s.credits-=ch.length;
+    say(s.name,'Время уроков сохранено: '+ch.length+'. Напомним за день до каждого.');
+    S.cv={screen:'cab'};
+  },
+  cDispute:function(d){
+    var t=val('dr-'+d.id);if(!t){alert2('Опишите, что пошло не так.');return false;}
+    S.disputes.push({id:nid(),lessonId:Number(d.id),text:t,status:'open',opened:false});
+    say('Администратор','Новая жалоба на урок.');
+  },
+  openRoom:function(d){S.room=Number(d.id);S.fin=false;},
+  closeRoom:function(){S.room=null;S.fin=false;},
+  tTab:function(d){S.tv={tab:d.k,studentId:null};},
+  tStudent:function(d){S.tv.studentId=d.id?Number(d.id):null;},
+  saveBoard:function(d){stu(Number(d.id)).board=val('board');},
+  saveNotes:function(d){var l=les(Number(d.id));l.priv=val('np-'+d.id);l.shared=val('ns-'+d.id);l.homework=val('nh-'+d.id);},
+  saveProfile:function(){T().video=val('p-video');T().card=val('p-card');},
+  savePrices:function(){T().langs.forEach(function(l,i){var v=Number(val('pr-'+i));if(v>0)l.price=v;});},
+  addLang:function(){
+    var n=val('nl-lang'),p=Number(val('nl-price'));
+    if(!n||!(p>0)){alert2('Укажите язык и цену.');return false;}
+    T().langs.push({lang:n,price:p,status:'pending',reason:''});
+    say('Администратор','Учитель Мария добавила язык «'+n+'» на проверку.');
+  },
+  saveAvail:function(){
+    var a={};
+    for(var i=0;i<7;i++){
+      var on=document.getElementById('av-on-'+i).checked,f=Number(val('av-f-'+i)),t=Number(val('av-t-'+i));
+      if(on&&t>f)a[i]=[f,t];
+    }
+    T().avail=a;
+  },
+  reqPayout:function(){T().payoutReq=true;say('Администратор','Мария запросила выплату: '+usd(balanceOf(T()))+'.');},
+  addMark:function(){
+    var tx=val('mk-text');if(!tx)return false;
+    var l=les(S.room);l.marks.push({tag:val('mk-tag'),text:tx});
+  },
+  finStart:function(){S.fin=true;},
+  finCancel:function(){S.fin=false;},
+  finDone:function(d){
+    var l=les(Number(d.id)),s=stu(l.studentId),t=S.teachers[l.teacherId];
+    l.shared=val('f-sum');l.homework=val('f-hw');l.summary=l.shared;
+    l.status='done';
+    if(l.type==='trial'){l.price=0;l.earned=Number(S.settings.trialPay)||0;}
+    else{l.price=priceOf(t,s.lang);l.earned=l.price*(s.source==='platform'?1-S.settings.commission/100:1);}
+    say(s.name,'Итог урока готов. '+(l.homework?'Домашнее задание: '+l.homework:'')+(l.type==='trial'?' Хотите продолжить? В кабинете есть пакеты уроков.':''));
+    S.fin=false;S.room=null;
+  },
+  noShow:function(d){var l=les(Number(d.id));l.status='noshow';S.room=null;say('Администратор','Ученик не пришёл на урок. Правило ожидания и возврата ещё не решено.');},
+  aTab:function(d){S.av.tab=d.k;if(d.k==='analytics')ensureStatSub();},
+  statClear:function(){
+    var keep=ME;
+    ST={};ST[MYID]=ME=newMe();
+    try{localStorage.removeItem(STKEY);}catch(e){}
+    if(DBREF&&canWrite){
+      DBREF.collection('stats').get().then(function(snap){
+        return Promise.all(snap.docs.map(function(d){return d.id===MYID?null:DBREF.doc('stats/'+d.id).delete();}));
+      }).then(function(){statDirty=true;scheduleStatPush();},function(){});
+    }
+  },
+  aVerify:function(d){
+    var l=T().langs[Number(d.i)];l.status=d.st;
+    say('Мария',d.st==='verified'?'Язык «'+l.lang+'» подтверждён, значок «Проверен» появился на странице.':'По языку «'+l.lang+'» нужен проверочный урок.');
+  },
+  aReject:function(d){
+    var l=T().langs[Number(d.i)],r=val('rj-'+d.i);
+    if(!r){alert2('Укажите причину отказа.');return false;}
+    l.status='rejected';l.reason=r;say('Мария','По языку «'+l.lang+'» отказ: '+r);
+  },
+  aInvite:function(){var c=val('inv-ch');if(!c)return false;S.invites.push(c);},
+  aMatch:function(d){
+    var r=S.requests.find(function(x){return x.id===Number(d.id);}),slots=genSlots('maria');
+    var s={id:nid(),name:r.name,contact:r.contact,teacherId:'maria',lang:r.lang,source:'platform',credits:0,board:'',paidAny:false};
+    S.students.push(s);
+    if(slots.length)S.lessons.push({id:nid(),studentId:s.id,teacherId:'maria',slot:slots[0],type:'trial',status:'planned',priv:'',shared:'',homework:'',marks:[],summary:'',price:0,earned:0});
+    r.done=true;
+    say(r.name+' ('+r.contact+')','Мы подобрали вам учителя: Мария. Пробный урок: '+(slots.length?slotLabel(slots[0]):'время уточним')+'.');
+    say('Мария','Администратор подобрал вам клиента: '+r.name+', '+r.lang+'. С его уроков удерживается комиссия '+S.settings.commission+'%.');
+  },
+  aPay:function(){var t=T(),b=balanceOf(t);t.paidOut+=b;t.payoutReq=false;say('Мария','Выплата отправлена: '+usd(b)+' ('+som(b)+') на '+t.card+'.');},
+  aOpenDispute:function(d){
+    var x=S.disputes.find(function(q){return q.id===Number(d.id);});x.opened=true;
+    S.log.unshift(new Date().toLocaleString('ru-RU')+' · Фаррух открыл материалы урока по жалобе №'+x.id+' (причина: спор)');
+  },
+  aResolve:function(d){
+    var x=S.disputes.find(function(q){return q.id===Number(d.id);}),l=les(x.lessonId),s=stu(l.studentId);
+    x.status=d.r;
+    if(d.r==='returned'){l.status='returned';l.earned=0;if(l.type==='regular')s.credits+=1;say(s.name,'Спор решён в вашу пользу: урок возвращён в пакет.');say('Мария','По жалобе урок возвращён ученику, заработок за него отменён.');}
+    else say(s.name,'Жалоба отклонена администратором.');
+  },
+  aSettings:function(){S.settings.commission=Number(val('s-com'))||0;S.settings.trialPay=Number(val('s-trial'))||0;S.settings.rate=Number(val('s-rate'))||1;}
+};
+function alert2(t){
+  trackErr(t,'validation');
+  var b=document.querySelector('.banner');
+  if(b){b.innerHTML='<span><b>'+esc(t)+'</b></span>';}
+}
+window.addEventListener('error',function(e){try{trackErr(e.message||'Ошибка кода','js');}catch(x){}});
+window.addEventListener('unhandledrejection',function(e){try{trackErr((e.reason&&e.reason.message)||'Необработанная ошибка','js');}catch(x){}});
+document.addEventListener('click',function(e){
+  var t=e.target.closest('[data-a]');
+  if(!t){trackMiss(e.target);return;}
+  var f=A[t.dataset.a];
+  if(!f)return;
+  trackClick(t.dataset);
+  errFlag=false;
+  var r=f(t.dataset,t);
+  if(r===false){if(!errFlag)trackErr('Действие не выполнено: поле пустое','validation');return;}
+  render();
+  if(['role','cGo','cBookStart','cBook','cRequest','cPack','cPay','cSchedule','openRoom','closeRoom','tTab','tStudent','aTab','finDone','noShow','reset'].indexOf(t.dataset.a)>=0)window.scrollTo(0,0);
+});
+S=load();
+try{ST=JSON.parse(localStorage.getItem(STKEY)||'{}')||{};}catch(e){ST={};}
+ensureMe();
+render();
+connect();
+</script>
+</body>
+</html>
