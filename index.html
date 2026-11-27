@@ -49,8 +49,14 @@ a{color:var(--acc)}
 .vdock.big .vvid{height:min(66vh,540px)}
 #vremote{width:100%;height:100%;object-fit:contain;background:#111}
 #vlocal{position:absolute;right:8px;bottom:8px;width:30%;max-width:150px;aspect-ratio:4/3;border-radius:8px;border:2px solid #fff;background:#000;object-fit:cover}
+.vdock.min .vvid{display:none}.vdock .vtitle{cursor:move;user-select:none;touch-action:none}
 .vstat{padding:6px 10px;font-size:13px;color:var(--mut)}
 @media(max-width:700px){.vdock,.vdock.big{left:8px;right:8px;width:auto;bottom:8px}.vvid{height:240px}}
+.board canvas{display:block;width:100%;aspect-ratio:5/3;background:#fff;border:1px solid var(--line);border-radius:8px;touch-action:none;cursor:crosshair}
+.btool{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px}
+.btn.sec.act{background:var(--accbg);font-weight:600}
+.sw{width:22px;height:22px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px var(--line);cursor:pointer;padding:0}
+.sw.act{box-shadow:0 0 0 2px var(--acc)}
 </style>
 </head>
 <body>
@@ -193,7 +199,7 @@ function statusLesson(l){
 /* ---------- аналитика интерфейса ---------- */
 var STKEY='lang-platform-stats-v1',ST={},ME=null,statDirty=false,statPushing=false,statTimer=null,statSub=false,errFlag=false;
 var SCR={'client:landing':'Клиент: страница учителя','client:book':'Клиент: запись на пробный','client:request':'Клиент: заявка на подбор','client:requestDone':'Клиент: заявка принята','client:cab':'Клиент: кабинет','client:pay':'Клиент: оплата','client:schedule':'Клиент: выбор времени','room:client':'Комната урока (клиент)','room:teacher':'Комната урока (учитель)','teacher:students':'Учитель: ученики','teacher:students-student':'Учитель: страница ученика','teacher:schedule':'Учитель: расписание','teacher:profile':'Учитель: профиль и языки','teacher:money':'Учитель: заработок','admin:verify':'Админ: проверка и приглашения','admin:requests':'Админ: заявки','admin:payouts':'Админ: выплаты','admin:disputes':'Админ: споры','admin:trials':'Админ: пробные','admin:settings':'Админ: настройки','admin:analytics':'Админ: аналитика'};
-var ACT={vStart:'Комната: начать видеоурок на сайте',vStop:'Комната: завершить звонок',vSize:'Комната: размер окна звонка',vMic:'Комната: микрофон вкл/выкл',vCam:'Комната: камера вкл/выкл',vShare:'Комната: показ экрана',role:'Переключить роль',reset:'Сбросить тест',cGo:'Клиент: переход',cBookStart:'Клиент: «Записаться на пробный урок»',cBook:'Клиент: подтвердить запись',cRequest:'Клиент: отправить заявку',cLogin:'Клиент: войти как существующий',cPack:'Клиент: выбрать пакет',cPay:'Клиент: подтвердить оплату',cSchedule:'Клиент: сохранить время уроков',cDispute:'Клиент: пожаловаться на урок',openRoom:'Открыть комнату урока',closeRoom:'Выйти из комнаты',tTab:'Учитель: вкладка',tStudent:'Учитель: страница ученика',saveBoard:'Учитель: сохранить доску',saveNotes:'Учитель: сохранить заметки',saveProfile:'Учитель: сохранить профиль',savePrices:'Учитель: сохранить цены',addLang:'Учитель: добавить язык',saveAvail:'Учитель: сохранить расписание',reqPayout:'Учитель: запросить выплату',addMark:'Учитель: добавить пометку',finStart:'Учитель: «Завершить урок»',finCancel:'Учитель: отмена завершения',finDone:'Учитель: отправить итог',noShow:'Учитель: «Ученик не пришёл»',aTab:'Админ: вкладка',aVerify:'Админ: проверка языка',aReject:'Админ: отказ по языку',aInvite:'Админ: создать приглашение',aMatch:'Админ: подобрать учителя',aPay:'Админ: выплатить',aOpenDispute:'Админ: открыть материалы спора',aResolve:'Админ: решение по спору',aSettings:'Админ: сохранить настройки',statClear:'Админ: очистить аналитику'};
+var ACT={bTool:'Доска: инструмент',bColor:'Доска: цвет',bUndo:'Доска: отменить',bClear:'Доска: очистить',vStart:'Комната: начать видеоурок на сайте',vStop:'Комната: завершить звонок',vSize:'Комната: размер окна звонка',vMin:'Комната: свернуть окно звонка',vMic:'Комната: микрофон вкл/выкл',vCam:'Комната: камера вкл/выкл',vShare:'Комната: показ экрана',role:'Переключить роль',reset:'Сбросить тест',cGo:'Клиент: переход',cBookStart:'Клиент: «Записаться на пробный урок»',cBook:'Клиент: подтвердить запись',cRequest:'Клиент: отправить заявку',cLogin:'Клиент: войти как существующий',cPack:'Клиент: выбрать пакет',cPay:'Клиент: подтвердить оплату',cSchedule:'Клиент: сохранить время уроков',cDispute:'Клиент: пожаловаться на урок',openRoom:'Открыть комнату урока',closeRoom:'Выйти из комнаты',tTab:'Учитель: вкладка',tStudent:'Учитель: страница ученика',saveBoard:'Учитель: сохранить доску',saveNotes:'Учитель: сохранить заметки',saveProfile:'Учитель: сохранить профиль',savePrices:'Учитель: сохранить цены',addLang:'Учитель: добавить язык',saveAvail:'Учитель: сохранить расписание',reqPayout:'Учитель: запросить выплату',addMark:'Учитель: добавить пометку',finStart:'Учитель: «Завершить урок»',finCancel:'Учитель: отмена завершения',finDone:'Учитель: отправить итог',noShow:'Учитель: «Ученик не пришёл»',aTab:'Админ: вкладка',aVerify:'Админ: проверка языка',aReject:'Админ: отказ по языку',aInvite:'Админ: создать приглашение',aMatch:'Админ: подобрать учителя',aPay:'Админ: выплатить',aOpenDispute:'Админ: открыть материалы спора',aResolve:'Админ: решение по спору',aSettings:'Админ: сохранить настройки',statClear:'Админ: очистить аналитику'};
 var PAR={verified:'подтвердить',test:'проверочный урок',returned:'вернуть урок',rejected:'отклонить',students:'ученики',schedule:'расписание',profile:'профиль',money:'заработок',verify:'проверка',requests:'заявки',payouts:'выплаты',disputes:'споры',trials:'пробные',settings:'настройки',analytics:'аналитика',client:'клиент',teacher:'учитель',admin:'администратор'};
 var CORE=['cBookStart|','cBook|','cRequest|','cPack|5','cPack|10','cPay|','cSchedule|','cDispute|','addMark|','finDone|','noShow|','saveBoard|','saveNotes|','savePrices|','addLang|','saveAvail|','reqPayout|','aVerify|verified','aVerify|test','aReject|','aInvite|','aMatch|','aPay|','aOpenDispute|','aResolve|returned','aResolve|rejected','aSettings|'];
 function lbl(key){
@@ -307,7 +313,7 @@ function analyticsTab(){
 }
 
 /* ---------- видеозвонок внутри сайта (прямое соединение браузер-браузер, PeerJS) ---------- */
-var VID={on:false,room:null,big:false,key:'',code:'',mic:true,cam:true,share:false,status:'',peer:null,local:null,screen:null,call:null,host:false,timer:null,hasCam:true};
+var VID={min:false,on:false,room:null,big:false,key:'',code:'',mic:true,cam:true,share:false,status:'',peer:null,local:null,screen:null,call:null,host:false,timer:null,hasCam:true};
 function vSetStatus(t){VID.status=t;var e=document.getElementById('vstat');if(e)e.textContent=t;}
 function vNewCode(){var c='abcdefghjkmnpqrstuvwxyz23456789',a=new Uint8Array(8),o='';(window.crypto||{getRandomValues:function(x){for(var i=0;i<x.length;i++)x[i]=Math.random()*256;}}).getRandomValues(a);for(var i=0;i<8;i++)o+=c[a[i]%c.length];return o;}
 function vKill(p){if(!p)return;p._dead=true;try{p.destroy();}catch(e){}}
@@ -316,7 +322,7 @@ function vCleanup(){
   try{if(VID.call)VID.call.close();}catch(e){}
   vKill(VID.peer);
   [VID.local,VID.screen].forEach(function(st){if(st)st.getTracks().forEach(function(x){x.stop();});});
-  VID.peer=VID.call=VID.local=VID.screen=null;VID.share=false;
+  VID.peer=VID.call=VID.local=VID.screen=null;VID.share=false;B.dc=null;
 }
 function vShowLocal(st){var v=document.getElementById('vlocal');if(v)v.srcObject=st;}
 function vBegin(code){
@@ -343,9 +349,10 @@ function vOpenPeer(hostId,tryHost){
   p.on('open',function(){
     if(!VID.on||VID.peer!==p)return;
     if(tryHost){VID.host=true;vSetStatus('Ждём собеседника. Пусть откроет этот урок и введёт код '+VID.code+'.');}
-    else{VID.host=false;vSetStatus('Соединяемся…');vWire(p.call(hostId,VID.local));}
+    else{VID.host=false;vSetStatus('Соединяемся…');vWire(p.call(hostId,VID.local));bWire(p.connect(hostId,{reliable:true,serialization:'json'}));}
   });
   p.on('call',function(c){c.answer(VID.local);vWire(c);});
+  p.on('connection',function(dc){bWire(dc);});
   p.on('disconnected',function(){if(p._dead||VID.peer!==p)return;try{p.reconnect();}catch(e){}});
   p.on('error',function(er){
     if(VID.peer!==p)return;
@@ -377,24 +384,118 @@ function vStopShare(){
   var cam=VID.local&&VID.local.getVideoTracks()[0];
   if(cam)vSendTrack(cam);vShowLocal(VID.local);syncDock();
 }
+function vDrag(d){
+  var tt=d.querySelector('.vtitle'),st=null;if(!tt)return;
+  tt.addEventListener('pointerdown',function(e){
+    if(window.innerWidth<=700)return;
+    var r=d.getBoundingClientRect();st={x:e.clientX-r.left,y:e.clientY-r.top};
+    d.style.left=r.left+'px';d.style.top=r.top+'px';d.style.right='auto';d.style.bottom='auto';
+    try{tt.setPointerCapture(e.pointerId);}catch(x){}
+  });
+  tt.addEventListener('pointermove',function(e){
+    if(!st)return;
+    d.style.left=Math.max(0,Math.min(window.innerWidth-80,e.clientX-st.x))+'px';
+    d.style.top=Math.max(0,Math.min(window.innerHeight-40,e.clientY-st.y))+'px';
+  });
+  var end=function(){st=null;};tt.addEventListener('pointerup',end);tt.addEventListener('pointercancel',end);
+}
 function syncDock(){
   var d=document.getElementById('vdock'); if(!d)return;
   if(VID.on&&!(S.room&&Number(S.room)===VID.room&&les(S.room)))VID.on=false;
-  if(!VID.on){if(d.dataset.key||VID.peer||VID.local){vCleanup();}d.hidden=true;d.innerHTML='';d.dataset.key='';return;}
-  d.className='vdock'+(VID.big?' big':'');
+  if(!VID.on){if(d.dataset.key||VID.peer||VID.local){vCleanup();}d.hidden=true;d.innerHTML='';d.dataset.key='';d.style.cssText='';return;}
+  d.className='vdock'+(VID.big?' big':'')+(VID.min?' min':'');
   if(d.dataset.key!==VID.key){ /* окно строим один раз, чтобы звонок не перезапускался при обновлении страницы */
     var canShare=!!(navigator.mediaDevices&&navigator.mediaDevices.getDisplayMedia);
-    d.innerHTML='<div class="vbar"><b>Видеоурок</b><span><button class="btn sec sm" data-a="vMic"></button><button class="btn sec sm" data-a="vCam"></button>'+(canShare?'<button class="btn sec sm" data-a="vShare"></button>':'')+'<button class="btn sec sm" data-a="vSize"></button><button class="btn bad sm" data-a="vStop">Завершить</button></span></div>'
+    d.innerHTML='<div class="vbar"><b class="vtitle" title="Можно перетащить">Видеоурок ⠿</b><span><button class="btn sec sm" data-a="vMic"></button><button class="btn sec sm" data-a="vCam"></button>'+(canShare?'<button class="btn sec sm" data-a="vShare"></button>':'')+'<button class="btn sec sm" data-a="vMin"></button><button class="btn sec sm" data-a="vSize"></button><button class="btn bad sm" data-a="vStop">Завершить</button></span></div>'
       +'<div class="vvid"><video id="vremote" autoplay playsinline></video><video id="vlocal" autoplay playsinline muted></video></div><div class="vstat" id="vstat"></div>';
-    d.dataset.key=VID.key;vShowLocal(VID.local);
+    d.dataset.key=VID.key;vShowLocal(VID.local);vDrag(d);
   }
   var q=function(a){return d.querySelector('[data-a='+a+']');};
   q('vMic').textContent=VID.mic?'Микрофон: вкл':'Микрофон: выкл';
   q('vCam').textContent=VID.cam?'Камера: вкл':'Камера: выкл';
   if(q('vShare'))q('vShare').textContent=VID.share?'Остановить показ':'Показать экран';
-  q('vSize').textContent=VID.big?'Меньше':'Крупнее';
+  q('vSize').textContent=VID.big?'Меньше':'Крупнее';q('vMin').textContent=VID.min?'Развернуть':'Свернуть';
   var e=document.getElementById('vstat');if(e)e.textContent=VID.status;
   d.hidden=false;
+}
+
+/* ---------- общая доска (рисование; синхронизация по каналу звонка) ---------- */
+var B={mine:{},text:'',key:'',items:[],tool:'pen',color:'#1f2937',cur:null,dc:null,t0:0};
+var BCOL=['#1f2937','#dc2626','#2563eb','#16a34a'];
+function bRid(){return vNewCode()+Date.now().toString(36);}
+function bLoad(l){
+  var key='lp-board-'+l.studentId;if(B.key===key)return;
+  B.key=key;B.items=[];B.cur=null;
+  try{B.items=JSON.parse(localStorage.getItem(key)||'[]');}catch(e){B.items=[];}
+}
+function bSave(){try{localStorage.setItem(B.key,JSON.stringify(B.items.slice(-400)));}catch(e){}}
+function bSend(m){try{if(B.dc&&B.dc.open)B.dc.send(m);}catch(e){}}
+function bPut(it){
+  var i=B.items.findIndex(function(x){return x.id===it.id;});
+  if(i<0)B.items.push(it);else B.items[i]=it;
+}
+function bDraw(){
+  var cv=document.getElementById('bcv');if(!cv)return;
+  var g=cv.getContext('2d'),W=cv.width,H=cv.height;
+  g.fillStyle='#fff';g.fillRect(0,0,W,H);g.lineCap='round';g.lineJoin='round';
+  B.items.forEach(function(it){
+    if(it.k==='t'){g.fillStyle=it.c;g.font='600 '+Math.round(H*0.055)+'px sans-serif';g.fillText(it.s,it.x*W,it.y*H);return;}
+    if(!it.p||!it.p.length)return;
+    g.strokeStyle=it.c;g.lineWidth=it.w*W;g.beginPath();
+    g.moveTo(it.p[0][0]*W,it.p[0][1]*H);
+    if(it.p.length===1)g.lineTo(it.p[0][0]*W+0.1,it.p[0][1]*H);
+    for(var i=1;i<it.p.length;i++)g.lineTo(it.p[i][0]*W,it.p[i][1]*H);
+    g.stroke();
+  });
+}
+function bPos(e,cv){var r=cv.getBoundingClientRect();return [Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))];}
+function bAttach(){
+  var cv=document.getElementById('bcv');if(!cv)return;
+  var q=function(x){return Math.round(x*1000)/1000;};
+  cv.addEventListener('pointerdown',function(e){
+    e.preventDefault();var ps=bPos(e,cv);
+    if(B.tool==='text'){
+      var tx=val('b-text');if(!tx)return;
+      var it={id:bRid(),k:'t',c:B.color,x:q(ps[0]),y:q(ps[1]),s:tx.slice(0,80)};
+      B.mine[it.id]=1;bPut(it);bSend({t:'put',it:it});bSave();bDraw();return;
+    }
+    try{cv.setPointerCapture(e.pointerId);}catch(x){}
+    B.cur={id:bRid(),k:'s',c:B.tool==='eraser'?'#ffffff':B.color,w:B.tool==='eraser'?0.03:0.005,p:[[q(ps[0]),q(ps[1])]]};
+    B.mine[B.cur.id]=1;bPut(B.cur);bDraw();
+  });
+  cv.addEventListener('pointermove',function(e){
+    if(!B.cur)return;var ps=bPos(e,cv);B.cur.p.push([q(ps[0]),q(ps[1])]);bDraw();
+    var n=Date.now();if(n-B.t0>60){B.t0=n;bSend({t:'put',it:B.cur});}
+  });
+  var end=function(){if(!B.cur)return;bSend({t:'put',it:B.cur});B.cur=null;bSave();};
+  cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+  var tin=document.getElementById('b-text');if(tin)tin.addEventListener('input',function(){B.text=tin.value;});
+  bDraw();
+}
+function bWire(dc){
+  B.dc=dc;
+  var hello=function(){bSend({t:'full',items:B.items});};
+  if(dc.open)hello();dc.on('open',hello);
+  dc.on('data',function(m){
+    if(!m)return;
+    if(m.t==='put'&&m.it&&m.it.id)bPut(m.it);
+    else if(m.t==='full'&&m.items){m.items.forEach(function(it){if(it&&it.id&&!B.items.some(function(x){return x.id===it.id;}))B.items.push(it);});if(!dc._got){dc._got=true;hello();}}
+    else if(m.t==='clr')B.items=[];
+    else if(m.t==='undo')B.items=B.items.filter(function(x){return x.id!==m.id;});
+    bSave();bDraw();
+  });
+  dc.on('close',function(){if(B.dc===dc)B.dc=null;});
+}
+function boardCard(l,isT){
+  bLoad(l);
+  var tb=function(a,t,n){return '<button class="btn sec sm'+(B.tool===t?' act':'')+'" data-a="'+a+'" data-k="'+t+'">'+n+'</button>';};
+  var sw=BCOL.map(function(c){return '<button class="sw'+(B.color===c?' act':'')+'" style="background:'+c+'" data-a="bColor" data-k="'+c+'" aria-label="цвет"></button>';}).join('');
+  return '<div class="card board"><h3>Общая доска <span class="chip'+(B.dc&&B.dc.open?' ok':'')+'">'+(B.dc&&B.dc.open?'собеседник видит, что вы рисуете':'рисуете только вы: нажмите «Начать видеоурок»')+'</span></h3>'
+   +'<div class="btool">'+tb('bTool','pen','Карандаш')+tb('bTool','eraser','Ластик')+tb('bTool','text','Текст')+sw
+   +'<input id="b-text" placeholder="Текст, потом нажмите на доске" value="'+esc(B.text)+'" style="width:210px;'+(B.tool==='text'?'':'display:none')+'">'
+   +'<button class="btn sec sm" data-a="bUndo">Отменить</button><button class="btn bad sm" data-a="bClear">Очистить</button></div>'
+   +'<canvas id="bcv" width="1000" height="600"></canvas>'
+   +'<div class="mut" style="margin-top:6px">Доска сохраняется на этом устройстве для этого ученика. Рисунок виден собеседнику, пока идёт видеоурок.</div></div>';
 }
 
 /* ---------- каркас ---------- */
@@ -405,6 +506,7 @@ function render(){
   else body=S.role==='client'?clientView():S.role==='teacher'?teacherView():adminView();
   $('#app').innerHTML=topBar()+body+feed();
   syncDock();
+  if(S.room&&les(S.room))bAttach();
   trackView();
 }
 function topBar(){
@@ -594,7 +696,8 @@ function roomView(){
   var marks=l.marks||[];
   var h='<div class="card"><div class="row sp"><button class="btn sec sm" data-a="closeRoom">← Выйти из комнаты</button>'+statusLesson(l)+'</div><h2 style="margin-top:10px">Урок: '+slotLabel(l.slot)+'</h2><div class="mut">'+esc(s.name)+' · '+esc(t.name)+' · '+esc(s.lang)+'</div></div>';
   h+='<div class="grid2"><div class="card"><h3>Видеозвонок</h3>'+videoCard(l,t,isT)+'</div>'
-   +'<div class="card"><h3>Общая доска</h3>'+(s.board?'<p><a href="'+esc(s.board)+'" target="_blank" rel="noopener">Открыть доску ученика</a></p><div class="mut">Одна постоянная доска на ученика.</div>':'<div class="mut">Доска не добавлена'+(isT?': добавьте ссылку на странице ученика.':'.')+'</div>')+'</div></div>';
+   +'<div class="card"><h3>Внешняя доска (если есть)</h3>'+(s.board?'<p><a href="'+esc(s.board)+'" target="_blank" rel="noopener">Открыть доску ученика</a></p>':'<div class="mut">Не нужна: доска урока ниже.'+(isT?' Внешнюю ссылку можно добавить на странице ученика.':'')+'</div>')+'</div></div>';
+  h+=boardCard(l,isT);
   h+='<div class="card"><h3>Пометки урока <span class="chip warn">опыт: так выглядела бы своя доска</span></h3>';
   if(!marks.length)h+='<div class="empty">Пометок нет.</div>';
   marks.forEach(function(m){var c={'Ошибка':'bad','Важно':'warn','Выучено':'ok'}[m.tag];h+='<div class="mark"><span class="chip '+c+'">'+m.tag+'</span><span>'+esc(m.text)+'</span></div>';});
@@ -749,8 +852,13 @@ var A={
     VID={on:true,room:l.id,big:false,key:code+'-'+Date.now(),code:code,mic:true,cam:true,share:false,status:'',peer:null,local:null,screen:null,call:null,host:false,timer:null,hasCam:true};
     setTimeout(function(){vBegin(code);},0);
   },
+  bTool:function(d){B.tool=d.k;},
+  bColor:function(d){B.color=d.k;if(B.tool==='eraser')B.tool='pen';},
+  bUndo:function(){for(var i=B.items.length-1;i>=0;i--){if(B.mine[B.items[i].id]){var id=B.items[i].id;B.items.splice(i,1);bSend({t:'undo',id:id});bSave();return;}}return false;},
+  bClear:function(){B.items=[];bSend({t:'clr'});bSave();},
   vStop:function(){VID.on=false;},
-  vSize:function(){VID.big=!VID.big;},
+  vSize:function(){VID.big=!VID.big;if(VID.big)VID.min=false;},
+  vMin:function(){VID.min=!VID.min;if(VID.min)VID.big=false;},
   vMic:function(){if(!VID.local)return false;VID.mic=!VID.mic;VID.local.getAudioTracks().forEach(function(x){x.enabled=VID.mic;});},
   vCam:function(){if(!VID.local||!VID.local.getVideoTracks().length)return false;VID.cam=!VID.cam;VID.local.getVideoTracks().forEach(function(x){x.enabled=VID.cam;});},
   vShare:function(){
@@ -850,7 +958,7 @@ window.addEventListener('error',function(e){try{trackErr(e.message||'Ошибк�
 window.addEventListener('unhandledrejection',function(e){try{trackErr((e.reason&&e.reason.message)||'Необработанная ошибка','js');}catch(x){}});
 document.addEventListener('click',function(e){
   var t=e.target.closest('[data-a]');
-  if(!t){trackMiss(e.target);return;}
+  if(!t){if(!(e.target.closest&&e.target.closest('#bcv')))trackMiss(e.target);return;}
   var f=A[t.dataset.a];
   if(!f)return;
   trackClick(t.dataset);
